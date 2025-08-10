@@ -242,6 +242,52 @@ const server = http.createServer(async (req, res) => {
     return;
   }
   
+  // クイズ状況取得API
+  if (pathname.startsWith('/api/quiz/status/') && req.method === 'GET') {
+    const userId = parseInt(pathname.split('/').pop());
+    if (!userId) {
+      Utils.sendError(res, 400, 'ユーザーIDが無効です');
+      return;
+    }
+    
+    try {
+      const isCompleted = Database.quizCompletions.has(userId);
+      const answers = Database.getUserAnswers(userId);
+      const totalQuestions = Database.questions.size;
+      
+      Utils.sendJSON(res, {
+        isCompleted: isCompleted,
+        answeredCount: answers.length,
+        totalQuestions: totalQuestions,
+        progress: Math.round((answers.length / totalQuestions) * 100)
+      });
+    } catch (error) {
+      Utils.sendError(res, 500, 'サーバーエラーが発生しました');
+    }
+    return;
+  }
+  
+  // アンケート状況取得API
+  if (pathname.startsWith('/api/survey/status/') && req.method === 'GET') {
+    const userId = parseInt(pathname.split('/').pop());
+    if (!userId) {
+      Utils.sendError(res, 400, 'ユーザーIDが無効です');
+      return;
+    }
+    
+    try {
+      const completed = Database.surveyAnswers.has(userId) ||
+                       Array.from(Database.surveyAnswers.values()).some(survey => survey.userId === userId);
+      
+      Utils.sendJSON(res, {
+        completed: completed
+      });
+    } catch (error) {
+      Utils.sendError(res, 500, 'サーバーエラーが発生しました');
+    }
+    return;
+  }
+
   // ランキングAPI
   if (pathname === '/api/ranking') {
     const ranking = Database.getRanking();
