@@ -186,9 +186,11 @@ const Quiz = {
   async loadQuestions() {
     try {
       const result = await Utils.apiCall('/api/quiz/questions');
-      this.questions = result.questions;
+      // サーバーは配列を直接返すので、result.questionsではなくresultを使用
+      this.questions = Array.isArray(result) ? result : (result.questions || []);
       return this.questions;
     } catch (error) {
+      console.error('問題読み込みエラー:', error);
       Utils.showError('問題の読み込みに失敗しました。');
       return [];
     }
@@ -437,6 +439,16 @@ const Quiz = {
   async initQuiz() {
     AppState.startTime = new Date();
     
+    // 認証確認
+    if (!Auth.isAuthenticated() || !AppState.currentUser) {
+      console.error('認証情報が不足しています');
+      const questionContainer = Utils.$('#question-container');
+      if (questionContainer) {
+        questionContainer.innerHTML = '<p style="text-align: center; color: var(--error);">認証情報の読み込みに失敗しました。</p>';
+      }
+      return;
+    }
+    
     // クイズ完了状態をチェック - 完了後は再アクセス禁止
     try {
       const statusResult = await Utils.apiCall(`/api/quiz/status/${AppState.currentUser.id}`);
@@ -447,10 +459,15 @@ const Quiz = {
       }
       
       // 既存の解答を読み込み（完了前のみ）
-      AppState.answers = statusResult.answers || {};
-      AppState.currentQuestion = statusResult.answeredCount + 1 || 1;
+      AppState.answers = Utils.loadFromStorage('quizAnswers') || {};
+      AppState.currentQuestion = Object.keys(AppState.answers).length + 1 || 1;
+      if (AppState.currentQuestion > 10) AppState.currentQuestion = 10;
     } catch (error) {
       console.log('クイズ状態チェックエラー:', error);
+      // エラー時はローカルストレージから復旧を試みる
+      AppState.answers = Utils.loadFromStorage('quizAnswers') || {};
+      AppState.currentQuestion = Object.keys(AppState.answers).length + 1 || 1;
+      if (AppState.currentQuestion > 10) AppState.currentQuestion = 10;
     }
     
     await this.loadQuestions();
@@ -458,6 +475,11 @@ const Quiz = {
     if (this.questions.length > 0) {
       this.displayQuestion(AppState.currentQuestion);
       this.updateNavigation();
+    } else {
+      const questionContainer = Utils.$('#question-container');
+      if (questionContainer) {
+        questionContainer.innerHTML = '<p style="text-align: center; color: var(--error);">問題の読み込みに失敗しました。ページを再読み込みしてください。</p>';
+      }
     }
   },
   

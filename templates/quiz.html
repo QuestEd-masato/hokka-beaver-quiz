@@ -126,6 +126,13 @@
                 return;
             }
 
+            // AppState.currentUserが設定されるまで待機
+            let retryCount = 0;
+            while (!AppState.currentUser && retryCount < 10) {
+                await new Promise(resolve => setTimeout(resolve, 100));
+                retryCount++;
+            }
+
             // ユーザー名表示
             const userNickname = Utils.$('#user-nickname');
             if (userNickname && AppState.currentUser) {

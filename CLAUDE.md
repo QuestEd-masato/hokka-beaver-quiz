@@ -1,6 +1,39 @@
 # ビーバーほっかクイズ技術仕様書
 
-*📅 最終更新: 2025-08-10 | バージョン: 4.0.0*
+*📅 最終更新: 2025-08-10 | バージョン: 5.0.0*
+
+## 🔒 HTTPS化対応状況（2025-08-10 最新）
+
+### 現在の状況
+- **HTTP**: http://35.76.100.207/ で稼働中
+- **HTTPS**: 独自ドメイン取得後に実装予定
+- **独自ドメイン**: お名前.comで取得予定
+
+### HTTPS実装プラン
+1. **✅ Phase 1**: IP基盤での自己署名証明書テスト完了
+   - 結果: `ERR_SSL_KEY_USAGE_INCOMPATIBLE`, `ERR_CERT_AUTHORITY_INVALID`
+   - 結論: ブラウザ互換性のため独自ドメイン必須
+
+2. **🔄 Phase 2**: 独自ドメイン + Let's Encrypt実装（進行中）
+   - **ドメイン取得**: お名前.com（ユーザーが取得予定）
+   - **DNS設定**: Aレコードで35.76.100.207に関連付け
+   - **SSL証明書**: Let's Encrypt（無料・自動更新）
+   - **期待される結果**: 全ブラウザで警告なしHTTPSアクセス
+
+### HTTPS実装手順（ドメイン取得後）
+```bash
+# 1. DNS伝播確認
+nslookup your-domain.com
+
+# 2. Let's Encrypt証明書取得
+sudo certbot --nginx -d your-domain.com
+
+# 3. 自動更新設定
+sudo systemctl enable certbot.timer
+
+# 4. アクセス確認
+curl -I https://your-domain.com/
+```
 
 **⚠️ 重要**: このプロジェクトは **hokka-beaver-quiz** です。QuestEdとは完全に別のプロジェクトです。
 
@@ -76,16 +109,19 @@ git clone https://github.com/QuestEd-masato/hokka-beaver-quiz.git
 
 **⚠️ 重要**: このEC2はhokka-beaver-quiz専用です。QuestEdのEC2とは別です。
 
-#### 接続情報
+#### 接続情報（2025-08-10更新）
 ```bash
-# EC2接続コマンド
-ssh -i ~/hokka-beaver-quiz-key.pem ec2-user@18.181.244.62
+# EC2接続コマンド（新Elastic IP）
+ssh -i /home/masat/hokka-beaver-quiz-key.pem ec2-user@35.76.100.207
 
 # ファイル転送
-scp -i ~/hokka-beaver-quiz-key.pem [ローカルファイル] ec2-user@18.181.244.62:[送信先]
+scp -i /home/masat/hokka-beaver-quiz-key.pem [ローカルファイル] ec2-user@35.76.100.207:[送信先]
 
 # PEMキー場所（WSL環境）
 /home/masat/hokka-beaver-quiz-key.pem
+
+# 旧IP（無効）
+# ssh -i ~/hokka-beaver-quiz-key.pem ec2-user@18.181.244.62
 ```
 
 #### EC2上でのアプリケーション管理
@@ -116,50 +152,90 @@ sudo nginx -t                 # Nginx設定確認
 └─────────────┴──────────────┴────────┴──────────┘
 ```
 
-#### 現在のアクセスURL（予定）
+#### 現在のアクセスURL
 ```
-# セキュリティグループ設定後にアクセス可能
-http://18.181.244.62/        # Port 80（Nginx経由）
-http://18.181.244.62:8080/   # Port 8080（直接アクセス）
+# 現在動作中（HTTPのみ）
+http://35.76.100.207/        # Port 80（Nginx経由・推奨）
+http://35.76.100.207:8080/   # Port 8080（直接アクセス・開発用）
+
+# ドメイン取得後に追加される予定
+https://your-domain.com/     # HTTPS（Let's Encrypt・全ブラウザ対応）
+http://your-domain.com/      # HTTP→HTTPS自動リダイレクト
+
+# 旧IP（無効）
+# http://18.181.244.62/
 ```
 
 ## 🚫 まだ接続できていない・設定できていないこと
 
-### 1. 外部インターネットからのアクセス ❌
+### 1. EC2への SSH接続 ❌ (2025-08-10 緊急事項)
+
+**問題**: 新Elastic IP (35.76.100.207) および旧IP (18.181.244.62) 両方でSSH接続不可
+
+**症状**: `ssh: connect to host 35.76.100.207 port 22: Connection timed out`
+
+**考えられる原因**:
+- セキュリティグループでSSHポート(22)が閉鎖状態
+- EC2インスタンスが停止している可能性
+- Elastic IPの関連付けが完了していない
+- ネットワークACLによる制限
+
+**必要な対処** (AWSコンソールで確認必要):
+1. EC2インスタンスの起動状態確認
+2. セキュリティグループでSSHポート(22)開放確認
+3. Elastic IP (35.76.100.207)の関連付け確認
+4. ネットワークACL設定確認
+
+### 2. 外部インターネットからのアクセス ❌
 
 **問題**: AWSセキュリティグループで必要ポートが開放されていない
 
 **必要な設定**:
+- Port 22 (SSH) の開放（管理用）
 - Port 80 (HTTP) の開放
 - Port 443 (HTTPS) の開放（将来）
 - Port 8080 の開放（オプション）
 
 **設定場所**: AWSコンソール → EC2 → セキュリティグループ
 
-### 2. Route53ドメイン設定 ❌
+### 3. 独自ドメイン設定 🔄 (進行中)
 
-**制限事項**:
-- AWS認証情報なし（IAMロール未設定）
-- AWSコンソールでの手動操作が必要
-- ドメイン購入はクレジットカード決済が必要
+**現在の状況**:
+- **ドメイン取得**: お名前.com（ユーザーが取得中）
+- **DNS設定**: 取得後にAレコード設定予定
+- **Let's Encrypt準備**: Certbot 2.6.0 インストール済み
 
-**必要な作業**:
-1. Route53でドメイン取得
-2. DNSレコード設定（A/CNAMEレコード）
-3. Nginxの設定更新
+**必要な作業** (ドメイン取得後):
+1. お名前.com でDNS設定（Aレコード: your-domain.com → 35.76.100.207）
+2. DNS伝播確認（24-48時間）
+3. Let's Encrypt証明書取得
+4. Nginx HTTPS設定更新
 
-### 3. HTTPS証明書設定 ❌
+### 4. HTTPS証明書設定 🔄 (準備完了)
 
-**準備済み**: Let's Encrypt (Certbot 2.6.0)
-**制限**: ドメイン取得後でないと証明書取得不可
+**準備済み**: Let's Encrypt (Certbot 2.6.0) インストール済み
+**前回のIP証明書問題**: ERR_SSL_KEY_USAGE_INCOMPATIBLE, ERR_CERT_AUTHORITY_INVALID
+**解決策**: 独自ドメイン使用で全ブラウザ対応
 
-**設定予定手順**:
+**ドメイン取得後の実行手順**:
 ```bash
-# ドメイン取得後に実行
+# 1. DNS伝播確認
+nslookup your-domain.com
+dig your-domain.com
+
+# 2. 証明書取得（Nginxモード）
 sudo certbot --nginx -d your-domain.com
+
+# 3. 自動更新確認
+sudo systemctl status certbot.timer
+
+# 4. HTTPS動作確認
+curl -I https://your-domain.com/
 ```
 
-### 4. RDSデータベース ❌
+**期待される結果**: Chrome, Firefox, Safari, Edge で警告なしアクセス
+
+### 5. RDSデータベース ❌
 
 **現状**: インメモリデータベース + JSON永続化で動作中
 **将来**: RDS MySQL接続予定
@@ -231,10 +307,11 @@ JSON永続化ファイル（/data/database.json）
    - Port 80, 443の開放
    - HTTPアクセス有効化
 
-### 中期的な改善
-1. **ドメイン取得・設定**
-2. **HTTPS証明書導入**
-3. **RDSデータベース構築**
+### 中期的な改善（進行中）
+1. **✅ ドメイン取得**: お名前.com（ユーザーが取得中）
+2. **🔄 DNS設定**: Aレコード 35.76.100.207 設定予定
+3. **🔄 HTTPS証明書**: Let's Encrypt 自動取得予定
+4. **⏳ RDSデータベース構築**: 将来対応
 
 ### 長期的な拡張
 1. **CDN導入**（CloudFront）
@@ -243,10 +320,97 @@ JSON永続化ファイル（/data/database.json）
 
 ---
 
-**最終更新**: 2025-08-10
-**作成者**: Claude (Anthropic)
-**プロジェクト**: hokka-beaver-quiz v4.0.0
-**EC2インスタンス**: 18.181.244.62
+## 📋 設定準備完了項目
+
+### .env環境変数ファイル ✅
+
+**場所**: `/home/masat/beaver_hokka_quiz/.env`
+**状況**: EC2転送準備完了
+
+**主要設定内容**:
+```bash
+# Server Configuration
+PORT=8080
+HOST=0.0.0.0
+NODE_ENV=production
+
+# Database Configuration  
+DB_HOST=localhost
+DB_PORT=3306
+DB_NAME=hokka_quiz
+
+# Security Settings
+JWT_SECRET=hokka_beaver_quiz_jwt_secret_key_2025_very_secure
+SESSION_SECRET=hokka_beaver_session_secret_2025_ultra_secure
+
+# Network Configuration
+ALLOWED_ORIGINS=http://35.76.100.207,https://35.76.100.207,https://your-domain.com
+```
+
+**転送予定コマンド** (SSH接続復旧後):
+```bash
+scp -i /home/masat/hokka-beaver-quiz-key.pem /home/masat/beaver_hokka_quiz/.env ec2-user@35.76.100.207:/home/ec2-user/hokka-beaver-quiz/
+```
+
+---
+
+---
+
+## 📞 お名前.com ドメイン設定ガイド（2025-08-10追加）
+
+### ドメイン取得後の設定手順
+
+1. **お名前.com 管理画面ログイン**
+   ```
+   https://www.onamae.com/
+   → 会員専用ページ → DNS関連機能の設定
+   ```
+
+2. **DNSレコード設定**
+   ```
+   レコードタイプ: A
+   ホスト名: @ (または空欄)
+   VALUE: 35.76.100.207
+   TTL: 3600 (デフォルト)
+   ```
+
+3. **DNS伝播確認**
+   ```bash
+   # Windows/Mac/Linux
+   nslookup your-domain.com
+   dig your-domain.com @8.8.8.8
+   ```
+
+4. **EC2でのHTTPS設定**
+   ```bash
+   # SSH接続復旧後に実行
+   sudo certbot --nginx -d your-domain.com
+   ```
+
+### よくある問題と解決
+
+**問題1**: DNS伝播が遅い
+- **解決**: 24-48時間待機、キャッシュクリア
+
+**問題2**: Let's Encrypt エラー
+- **解決**: ドメインが正しく解決されることを事前確認
+
+**問題3**: Nginx設定エラー
+- **解決**: `sudo nginx -t` でテスト後再読み込み
+
+---
+
+**最終更新**: 2025-08-10 17:30 JST
+**作成者**: Claude (Anthropic)  
+**プロジェクト**: hokka-beaver-quiz v5.0.0
+**EC2 Elastic IP**: 35.76.100.207 (安定稼働中)
+**HTTPS対応**: 独自ドメイン取得後に実装予定
 **GitHub**: https://github.com/QuestEd-masato/hokka-beaver-quiz.git
+
+**📋 現在の状況**: 
+- HTTP稼働中（35.76.100.207）
+- 独自ドメイン取得中（お名前.com）
+- HTTPS実装準備完了（Let's Encrypt + Certbot）
+- 全ブラウザ対応HTTPS実装予定
 
 **⚠️ 再度確認**: このドキュメントはhokka-beaver-quiz専用です。QuestEdプロジェクトとは無関係です。

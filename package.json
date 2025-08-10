@@ -8,10 +8,21 @@
     "dev": "node enhanced_server.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": ["quiz", "beaver", "okaki", "festival", "education", "csv-export", "high-performance"],
+  "keywords": [
+    "quiz",
+    "beaver",
+    "okaki",
+    "festival",
+    "education",
+    "csv-export",
+    "high-performance"
+  ],
   "author": "金沢学院大学附属中学校２年１組",
   "license": "MIT",
-  "dependencies": {},
+  "dependencies": {
+    "dotenv": "^17.2.1",
+    "mysql2": "^3.14.3"
+  },
   "engines": {
     "node": ">=16.0.0"
   },
@@ -19,6 +30,10 @@
     "maxConnections": 200,
     "timeout": 30000,
     "keepAlive": 65000,
-    "features": ["csv-export", "real-time-monitoring", "connection-management"]
+    "features": [
+      "csv-export",
+      "real-time-monitoring",
+      "connection-management"
+    ]
   }
 }

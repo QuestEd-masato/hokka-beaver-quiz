@@ -251,7 +251,10 @@
         // ユーザーデータ読み込み
         async function loadUserData() {
             const user = AppState.currentUser;
-            if (!user) return;
+            if (!user) {
+                console.error('ユーザー情報が利用できません');
+                return;
+            }
 
             // ユーザー情報表示
             Utils.$('#user-nickname').textContent = user.nickname;
