@@ -1,349 +1,252 @@
 # ビーバーほっかクイズ技術仕様書
 
-*📅 最終更新: 2025-01-25 | バージョン: 3.0.0*
+*📅 最終更新: 2025-08-10 | バージョン: 4.0.0*
+
+**⚠️ 重要**: このプロジェクトは **hokka-beaver-quiz** です。QuestEdとは完全に別のプロジェクトです。
 
 ## 📋 プロジェクト概要
 
 ### 基本情報
-- **プロジェクト名**: ビーバーほっかクイズ (beaver_hokka_quiz)
+- **プロジェクト名**: ビーバーほっかクイズ (hokka-beaver-quiz)
 - **目的**: 中学校文化祭でのクイズラリーアプリケーション
 - **対象**: 中学生および来場者（小学生〜大人）
 - **開発言語**: JavaScript (Node.js)
-- **データベース**: MySQL 8.0
+- **データベース**: インメモリデータベース + JSON永続化（RDS準備中）
 
 ### プロジェクトの特徴
 - 北陸製菓の「ビーバーおかき」をテーマにした教育的クイズ
 - 紙の問題とアプリ回答を組み合わせたハイブリッド方式
 - 200名同時接続対応の高性能設計
+- **モジュラーアーキテクチャ**: Phase 1 & 2 完了
 
-## 🗂️ ディレクトリ構造
+## 🏗️ アーキテクチャ（2025-08-10更新）
+
+### モジュール構成（Phase 1 & 2 完了）
 
 ```
-beaver_hokka_quiz/
-├── enhanced_server.js      # メインサーバーファイル
-├── package.json           # プロジェクト設定
-├── CLAUDE.md             # 本仕様書
-├── README.md             # プロジェクト説明
-├── database/             # データベース関連
-│   └── init.sql         # DB初期化スクリプト
-├── templates/            # HTMLテンプレート
-│   ├── index.html       # トップページ
-│   ├── register.html    # ユーザー登録
-│   ├── quiz.html        # クイズ画面
-│   ├── result.html      # 結果画面
-│   ├── ranking.html     # ランキング
-│   ├── survey.html      # アンケート
-│   ├── mypage.html      # マイページ
-│   ├── review.html      # 復習画面
-│   └── admin.html       # 管理画面
-├── public/              # 静的ファイル
-│   ├── css/
-│   │   └── style.css    # スタイルシート
-│   ├── js/
-│   │   └── app.js       # クライアントJS
-│   └── images/          # 画像ファイル
-└── data/                # データ永続化
-    └── database.json    # バックアップデータ
+hokka-beaver-quiz/
+├── enhanced_server.js      # メインサーバー（413行）
+│   └── 16個のAPIエンドポイント処理
+├── database.js            # データベース管理モジュール（609行）
+│   ├── インメモリデータベース（Map構造）
+│   ├── JSON永続化機能
+│   ├── ユーザー認証・管理
+│   ├── クイズ進行管理
+│   └── CSV出力機能
+├── utils.js               # ユーティリティ関数（127行）
+│   ├── MIMEタイプ処理
+│   ├── CORS設定
+│   ├── エラー処理統一
+│   └── レスポンス処理統一
+└── その他のファイル...
 ```
 
-## 📐 命名規則・コーディングルール
-
-### 1. データベース命名規則
-
-#### テーブル名
-- **形式**: 複数形・スネークケース
-- **例**: `users`, `questions`, `user_answers`
-
-#### カラム名
-- **形式**: スネークケース
-- **例**: `created_at`, `is_admin`, `question_text`
-
-#### 標準カラム
-```sql
--- すべてのテーブルに含める標準カラム
-created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP    -- 作成日時
-updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP    -- 更新日時
-               ON UPDATE CURRENT_TIMESTAMP
-```
-
-### 2. JavaScript命名規則
-
-#### 変数・関数
+### データ永続化方式
 ```javascript
-// 変数: キャメルケース（名詞）
-let currentUser = null;        // 現在のユーザー
-let questionCount = 10;        // 問題数
-const maxConnections = 200;    // 最大接続数
-
-// 関数: キャメルケース（動詞始まり）
-function getUserData() {}      // ユーザーデータを取得する
-function saveAnswer() {}       // 回答を保存する
-function calculateScore() {}   // スコアを計算する
-
-// 定数: 大文字スネークケース
-const PORT = 8080;
-const MAX_ATTEMPTS = 3;
-const DATABASE_NAME = 'beaver_hokka_quiz';
-```
-
-#### オブジェクト・クラス
-```javascript
-// オブジェクト: パスカルケース
+// インメモリ + JSON永続化
 const Database = {
-  users: new Map(),
-  questions: new Map()
-};
-
-// クラス: パスカルケース
-class QuizManager {
-  constructor() {}
+  users: new Map(),           // ユーザー管理
+  questions: new Map(),       // 問題管理
+  userAnswers: new Map(),     // 回答管理
+  rankings: new Map(),        // ランキング管理
+  quizCompletions: new Map(), // 完了状況
+  saveToFile(),              // JSON保存
+  loadFromFile()             // JSON読み込み
 }
 ```
 
-### 3. CSS命名規則
+## 🔗 接続・アクセス方法（非エンジニア向け）
 
-#### CSS変数
-```css
-/* カラーテーマ: --用途名 */
---primary: #d2691e;        /* メインカラー */
---secondary: #daa520;      /* サブカラー */
---font-size-base: 1rem;    /* 基本文字サイズ */
-```
+### 1. GitHub接続方法
 
-#### クラス名
-```css
-/* BEM風の命名 */
-.quiz-container {}           /* ブロック */
-.quiz-container__header {}   /* 要素 */
-.quiz-container--active {}   /* 修飾子 */
-```
+**リポジトリURL**: https://github.com/QuestEd-masato/hokka-beaver-quiz.git
 
-### 4. エンドポイント命名規則
+**注意**: QuestEd-BaseBuilderとは完全に別のリポジトリです！
 
-#### RESTful API設計
-```javascript
-// 形式: /api/リソース名/アクション
-'/api/register'          // POST: ユーザー登録
-'/api/login'            // POST: ログイン
-'/api/quiz/start'       // POST: クイズ開始
-'/api/quiz/answer'      // POST: 回答送信
-'/api/quiz/result'      // GET:  結果取得
-'/api/ranking'          // GET:  ランキング取得
-'/api/admin/questions'  // GET:  問題一覧（管理者）
-```
-
-## 💬 コメント記述ルール（小学生にも分かりやすく）
-
-### 基本方針
-すべての重要な処理には、小学生でも理解できる日本語コメントを追加する
-
-### コメント例
-```javascript
-/**
- * ユーザー登録機能
- * 新しいユーザーをデータベースに登録します
- * 
- * やること：
- * 1. ニックネームが他の人と同じじゃないか確認する
- * 2. パスワードを暗号化（あんごうか）する
- * 3. データベースに保存する
- * 
- * @param {string} nickname - ニックネーム（あだ名）
- * @param {string} ageGroup - 年齢層（ねんれいそう）
- * @param {string} password - パスワード（ひみつの言葉）
- * @returns {boolean} 成功したらtrue、失敗したらfalse
- */
-function registerUser(nickname, ageGroup, password) {
-    // ニックネームが既に使われていないかチェック
-    // （同じ名前の人がいないか確認する）
-    if (Database.users.has(nickname)) {
-        return false; // もう使われている！
-    }
-    
-    // パスワードを暗号化する
-    // （他の人に見られても分からないようにする）
-    const hashedPassword = hashPassword(password);
-    
-    // 新しいユーザーとして保存
-    Database.users.set(nickname, {
-        nickname: nickname,
-        ageGroup: ageGroup,
-        password: hashedPassword,
-        createdAt: new Date() // 今の時間を記録
-    });
-    
-    return true; // 登録成功！
-}
-```
-
-### SQLコメント
-```sql
--- ユーザーテーブル: みんなの情報を保存する場所
-CREATE TABLE users (
-    id INT AUTO_INCREMENT PRIMARY KEY,  -- 一人一人の番号（自動で増える）
-    nickname VARCHAR(50) NOT NULL,      -- ニックネーム（必ず入力）
-    age_group ENUM(                     -- 年齢層（次の中から選ぶ）
-        'kindergarten',  -- ようちえん・ほいくえん
-        'elementary',    -- 小学生
-        'junior_high',   -- 中学生
-        'high_school',   -- 高校生
-        'adult'         -- 大人
-    ) NOT NULL
-);
-```
-
-### HTMLコメント
-```html
-<!-- クイズの解答エリア -->
-<!-- ここで答えを選んでもらいます -->
-<div class="quiz-answer-area">
-    <!-- 4つの選択肢（A, B, C, D） -->
-    <button class="answer-button" data-answer="A">A</button>
-    <button class="answer-button" data-answer="B">B</button>
-    <button class="answer-button" data-answer="C">C</button>
-    <button class="answer-button" data-answer="D">D</button>
-</div>
-```
-
-## 🗄️ データベース設計
-
-### テーブル一覧
-
-#### 1. users（ユーザー）
-| カラム名 | 型 | 説明 |
-|---------|-----|------|
-| id | INT | ユーザーID（自動番号） |
-| nickname | VARCHAR(50) | ニックネーム |
-| age_group | ENUM | 年齢層 |
-| gender | ENUM | 性別 |
-| password_hash | VARCHAR(255) | 暗号化パスワード |
-| is_admin | BOOLEAN | 管理者フラグ |
-| created_at | TIMESTAMP | 登録日時 |
-
-#### 2. questions（問題）
-| カラム名 | 型 | 説明 |
-|---------|-----|------|
-| id | INT | 問題ID |
-| question_number | INT | 問題番号（1〜10） |
-| question_text | TEXT | 問題文 |
-| choice_a〜d | VARCHAR(255) | 選択肢A〜D |
-| correct_answer | ENUM('A','B','C','D') | 正解 |
-| explanation | TEXT | 解説文 |
-
-#### 3. user_answers（ユーザー回答）
-| カラム名 | 型 | 説明 |
-|---------|-----|------|
-| id | INT | 回答ID |
-| user_id | INT | ユーザーID |
-| question_id | INT | 問題ID |
-| selected_answer | ENUM | 選んだ答え |
-| is_correct | BOOLEAN | 正解かどうか |
-| answered_at | TIMESTAMP | 回答日時 |
-
-#### 4. rankings（ランキング）
-| カラム名 | 型 | 説明 |
-|---------|-----|------|
-| id | INT | ランキングID |
-| user_id | INT | ユーザーID |
-| score | DECIMAL(5,2) | 得点 |
-| correct_answers | INT | 正解数 |
-| final_score | DECIMAL(5,2) | 最終得点 |
-| rank_position | INT | 順位 |
-
-## 🚀 サーバー設定
-
-### 基本設定
-```javascript
-// サーバー設定
-const PORT = 8080;              // ポート番号
-const HOST = '0.0.0.0';        // すべてのIPから接続可能
-const MAX_CONNECTIONS = 200;    // 最大同時接続数
-const TIMEOUT = 30000;          // タイムアウト時間（30秒）
-```
-
-### 起動方法
+#### コードのダウンロード方法
 ```bash
-# サーバー起動
-node enhanced_server.js
+# 1. GitHubからダウンロード（開発者向け）
+git clone https://github.com/QuestEd-masato/hokka-beaver-quiz.git
 
-# アクセスURL
-http://localhost:8080
-http://127.0.0.1:8080
+# 2. ブラウザでダウンロード（一般向け）
+# GitHubページで緑色の「Code」ボタン → 「Download ZIP」をクリック
 ```
 
-## 🔒 セキュリティ設定
+### 2. EC2接続方法
 
-### パスワード管理
-- bcryptによるハッシュ化
-- 平文パスワードは保存しない
+**⚠️ 重要**: このEC2はhokka-beaver-quiz専用です。QuestEdのEC2とは別です。
 
-### セッション管理
-- メモリベースセッション
-- タイムアウト設定あり
+#### 接続情報
+```bash
+# EC2接続コマンド
+ssh -i ~/hokka-beaver-quiz-key.pem ec2-user@18.181.244.62
 
-### 入力値検証
-- SQLインジェクション対策
-- XSS対策（HTMLエスケープ）
+# ファイル転送
+scp -i ~/hokka-beaver-quiz-key.pem [ローカルファイル] ec2-user@18.181.244.62:[送信先]
 
-## 📊 パフォーマンス設定
-
-### 同時接続対応
-- 最大200名同時接続
-- 接続数モニタリング
-- 自動タイムアウト処理
-
-### データ永続化
-- 定期的なJSONファイル保存
-- サーバー再起動時の自動復元
-
-## 🎨 UIデザイン仕様
-
-### カラーテーマ
-```css
-/* ビーバー・おかきテーマ */
---primary: #d2691e;      /* チョコレート色 */
---secondary: #daa520;    /* おかきの色 */
---accent: #cd853f;       /* せんべいの色 */
---success: #228b22;      /* 成功（緑） */
---warning: #ff8c00;      /* 警告（オレンジ） */
---error: #dc143c;        /* エラー（赤） */
+# PEMキー場所（WSL環境）
+/home/masat/hokka-beaver-quiz-key.pem
 ```
 
-### レスポンシブ対応
-- スマートフォン: 320px〜
-- タブレット: 768px〜
-- PC: 1024px〜
+#### EC2上でのアプリケーション管理
+```bash
+# PM2でのアプリケーション管理
+pm2 status           # アプリの状況確認
+pm2 logs hokka-quiz  # ログ確認
+pm2 restart hokka-quiz  # アプリ再起動
+pm2 stop hokka-quiz     # アプリ停止
 
-## 📝 今後の開発方針
-
-### コード整理の推奨事項
-1. **機能別ファイル分割**
-   - enhanced_server.jsを機能ごとに分割
-   - ルーティング、データベース、認証を別ファイル化
-
-2. **コメントの充実**
-   - すべての関数に日本語説明を追加
-   - 複雑な処理には段階的な説明を記載
-
-3. **エラーハンドリング強化**
-   - try-catchの適切な使用
-   - ユーザーフレンドリーなエラーメッセージ
-
-### 推奨ファイル構成（将来）
+# Nginx（ウェブサーバー）管理
+sudo systemctl status nginx   # Nginx状況確認
+sudo systemctl restart nginx  # Nginx再起動
+sudo nginx -t                 # Nginx設定確認
 ```
-src/
-├── server.js          # メインサーバー
-├── routes/            # ルーティング
-│   ├── auth.js       # 認証関連
-│   ├── quiz.js       # クイズ関連
-│   └── admin.js      # 管理機能
-├── models/            # データモデル
-├── services/          # ビジネスロジック
-└── utils/             # ユーティリティ
+
+### 3. 現在のアクセス状況
+
+#### ✅ 動作中のサービス
 ```
+┌─────────────┬──────────────┬────────┬──────────┐
+│ サービス名   │ ポート       │ 状況   │ 用途     │
+├─────────────┼──────────────┼────────┼──────────┤
+│ hokka-quiz  │ 8080        │ ✅動作 │ アプリ本体│
+│ nginx       │ 80          │ ✅動作 │ リバース  │
+│ PM2         │ -           │ ✅動作 │ プロセス  │
+│ certbot     │ -           │ ✅準備 │ SSL証明書 │
+└─────────────┴──────────────┴────────┴──────────┘
+```
+
+#### 現在のアクセスURL（予定）
+```
+# セキュリティグループ設定後にアクセス可能
+http://18.181.244.62/        # Port 80（Nginx経由）
+http://18.181.244.62:8080/   # Port 8080（直接アクセス）
+```
+
+## 🚫 まだ接続できていない・設定できていないこと
+
+### 1. 外部インターネットからのアクセス ❌
+
+**問題**: AWSセキュリティグループで必要ポートが開放されていない
+
+**必要な設定**:
+- Port 80 (HTTP) の開放
+- Port 443 (HTTPS) の開放（将来）
+- Port 8080 の開放（オプション）
+
+**設定場所**: AWSコンソール → EC2 → セキュリティグループ
+
+### 2. Route53ドメイン設定 ❌
+
+**制限事項**:
+- AWS認証情報なし（IAMロール未設定）
+- AWSコンソールでの手動操作が必要
+- ドメイン購入はクレジットカード決済が必要
+
+**必要な作業**:
+1. Route53でドメイン取得
+2. DNSレコード設定（A/CNAMEレコード）
+3. Nginxの設定更新
+
+### 3. HTTPS証明書設定 ❌
+
+**準備済み**: Let's Encrypt (Certbot 2.6.0)
+**制限**: ドメイン取得後でないと証明書取得不可
+
+**設定予定手順**:
+```bash
+# ドメイン取得後に実行
+sudo certbot --nginx -d your-domain.com
+```
+
+### 4. RDSデータベース ❌
+
+**現状**: インメモリデータベース + JSON永続化で動作中
+**将来**: RDS MySQL接続予定
+**影響**: 現在も完全に動作するため急務ではない
+
+## 📊 現在の構成（非エンジニア向け説明）
+
+### 1. サーバー構成
+
+```
+インターネット
+    ↓
+【AWSセキュリティグループ】← 現在閉鎖中（設定必要）
+    ↓
+【EC2インスタンス：18.181.244.62】
+    ├── Nginx（ポート80） ← リバースプロキシ
+    │   └── セキュリティヘッダー追加
+    │   └── アクセスログ記録
+    └── hokka-quiz（ポート8080） ← Node.jsアプリケーション
+        ├── ユーザー管理
+        ├── クイズ機能
+        ├── ランキング
+        └── 管理画面
+```
+
+### 2. データの流れ
+
+```
+ユーザーのスマホ/PC
+    ↓（HTTPリクエスト）
+Nginx（ポート80）
+    ↓（プロキシ転送）
+hokka-quizアプリ（ポート8080）
+    ↓（データ処理）
+インメモリデータベース
+    ↓（定期保存）
+JSON永続化ファイル（/data/database.json）
+```
+
+### 3. データ内容
+
+**現在保存されているデータ**:
+- ユーザー: 3名（admin, test, aaa）
+- 問題: 10問（北陸製菓ビーバー関連）
+- 回答履歴: 0件
+- ランキング: 0件
+
+## 🎯 システムの利点
+
+### 1. 高い可用性
+- PM2による自動復旧
+- Nginxによる安定したWebサーバー
+- インメモリデータベースによる高速処理
+
+### 2. スケーラビリティ
+- 200名同時接続対応
+- モジュラー設計による拡張性
+- 将来のRDS移行準備完了
+
+### 3. 運用しやすさ
+- ログ自動記録
+- PM2による簡単なプロセス管理
+- 自動データバックアップ
+
+## 📝 次のステップ
+
+### 即座に実施可能
+1. **セキュリティグループ設定**（AWSコンソール）
+   - Port 80, 443の開放
+   - HTTPアクセス有効化
+
+### 中期的な改善
+1. **ドメイン取得・設定**
+2. **HTTPS証明書導入**
+3. **RDSデータベース構築**
+
+### 長期的な拡張
+1. **CDN導入**（CloudFront）
+2. **ロードバランサー設定**
+3. **監視・アラート設定**
 
 ---
 
-**最終更新**: 2025-01-25
+**最終更新**: 2025-08-10
 **作成者**: Claude (Anthropic)
-**プロジェクト**: beaver_hokka_quiz v3.0
+**プロジェクト**: hokka-beaver-quiz v4.0.0
+**EC2インスタンス**: 18.181.244.62
+**GitHub**: https://github.com/QuestEd-masato/hokka-beaver-quiz.git
+
+**⚠️ 再度確認**: このドキュメントはhokka-beaver-quiz専用です。QuestEdプロジェクトとは無関係です。
