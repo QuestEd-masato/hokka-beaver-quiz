@@ -48,3 +48,5 @@ next-env.d.ts
 *_original.js
 test_*.js
 *:Zone.Identifier
+# Phase B バックアップディレクトリ（開発用）
+phase_b_backup_*/

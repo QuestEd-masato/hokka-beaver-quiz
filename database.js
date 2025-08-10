@@ -15,6 +15,17 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 
+// === パフォーマンス最適化設定 (Phase A2) ===
+const IS_PRODUCTION = process.env.NODE_ENV === 'production';
+const LOG_LEVEL = process.env.LOG_LEVEL || (IS_PRODUCTION ? 'error' : 'info');
+
+// 最適化されたログ関数
+const logger = {
+  info: (msg) => { if (LOG_LEVEL === 'info' || LOG_LEVEL === 'debug') console.log(msg); },
+  error: (msg) => { console.error(msg); },
+  debug: (msg) => { if (LOG_LEVEL === 'debug') console.log('DEBUG:', msg); }
+};
+
 // データディレクトリ設定
 const DATA_DIR = './data';
 
@@ -31,8 +42,70 @@ const Database = {
   surveyAnswers: new Map(),
   quizCompletions: new Map(), // クイズ完了状況を追跡
   
+  // === パフォーマンス最適化用フィールド (Phase A1) ===
+  _isDirty: false,        // データ変更フラグ
+  _batchTimer: null,      // バッチ保存用タイマー
+  _batchInterval: 1000,   // バッチ保存間隔（1秒）- セキュリティ修正
+  
   /**
-   * データをファイルに保存
+   * 非同期バッチ保存のスケジューリング (Phase A1 最適化)
+   * データ変更を検知してバッチでまとめて保存
+   */
+  scheduleSave() {
+    this._isDirty = true;
+    
+    // 既にタイマーが設定されている場合は何もしない
+    if (this._batchTimer) {
+      return;
+    }
+    
+    // バッチ保存タイマーを設定
+    this._batchTimer = setTimeout(async () => {
+      if (this._isDirty) {
+        try {
+          await this.saveToFileAsync();
+          this._isDirty = false;
+          logger.info('📄 バッチ保存完了');
+        } catch (error) {
+          logger.error('❌ バッチ保存エラー:' + error.message);
+          // エラー時は次回再試行のためフラグを維持
+        }
+      }
+      this._batchTimer = null;
+    }, this._batchInterval);
+  },
+
+  /**
+   * 非同期でデータをファイルに保存 (Phase A1 最適化)
+   * 全てのMapオブジェクトをJSONファイルに永続化
+   */
+  async saveToFileAsync() {
+    const data = {
+      users: Array.from(this.users.entries()),
+      questions: Array.from(this.questions.entries()),
+      userAnswers: Array.from(this.userAnswers.entries()),
+      quizSessions: Array.from(this.quizSessions.entries()),
+      rankings: Array.from(this.rankings.entries()),
+      surveyAnswers: Array.from(this.surveyAnswers.entries()),
+      quizCompletions: Array.from(this.quizCompletions.entries()),
+      timestamp: new Date().toISOString()
+    };
+    
+    // データディレクトリが存在しない場合は作成
+    if (!fs.existsSync(DATA_DIR)) {
+      fs.mkdirSync(DATA_DIR, { recursive: true });
+    }
+    
+    // 非同期でファイル書き込み
+    const fs_promises = require('fs').promises;
+    await fs_promises.writeFile(
+      path.join(DATA_DIR, 'database.json'), 
+      JSON.stringify(data, null, 2)
+    );
+  },
+
+  /**
+   * データをファイルに保存 (互換性維持用 - 段階的に置換予定)
    * 全てのMapオブジェクトをJSONファイルに永続化
    */
   saveToFile() {
@@ -54,9 +127,9 @@ const Database = {
       }
       
       fs.writeFileSync(path.join(DATA_DIR, 'database.json'), JSON.stringify(data, null, 2));
-      console.log('✅ データを保存しました');
+      logger.info('✅ データを保存しました');
     } catch (error) {
-      console.error('❌ データ保存エラー:', error.message);
+      logger.error('❌ データ保存エラー:' + error.message);
     }
   },
   
@@ -82,7 +155,7 @@ const Database = {
       this.surveyAnswers = new Map(data.surveyAnswers || []);
       this.quizCompletions = new Map(data.quizCompletions || []);
       
-      console.log(`✅ データを復元しました (${data.timestamp || '不明'})`);
+      logger.info(`✅ データを復元しました (${data.timestamp || '不明'})`);
       console.log(`👥 ユーザー数: ${this.users.size}, 📝 解答数: ${this.userAnswers.size}`);
       return true;
     } catch (error) {
@@ -178,7 +251,7 @@ const Database = {
     };
     
     this.userAnswers.set(answerKey, userAnswer);
-    this.saveToFile();
+    this.scheduleSave(); // Phase A1: バッチ保存に変更
     
     return {
       correct: isCorrect,
@@ -224,7 +297,7 @@ const Database = {
     // ランキング更新
     this.updateRanking(userId, score, correctCount);
     
-    this.saveToFile();
+    this.scheduleSave(); // Phase A1: バッチ保存に変更
     
     return {
       score: score,

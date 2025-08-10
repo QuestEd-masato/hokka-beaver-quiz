@@ -27,6 +27,17 @@ const Utils = require('./utils.js');
 const PORT = 8080;
 const HOST = '0.0.0.0';
 
+// === パフォーマンス最適化設定 (Phase A2) ===
+const IS_PRODUCTION = process.env.NODE_ENV === 'production';
+const LOG_LEVEL = process.env.LOG_LEVEL || (IS_PRODUCTION ? 'error' : 'info');
+
+// 最適化されたログ関数
+const logger = {
+  info: (msg) => { if (LOG_LEVEL === 'info' || LOG_LEVEL === 'debug') console.log(msg); },
+  error: (msg) => { console.error(msg); },
+  debug: (msg) => { if (LOG_LEVEL === 'debug') console.log('DEBUG:', msg); }
+};
+
 // 200名同時接続対応設定
 const MAX_CONNECTIONS = 200;
 const TIMEOUT = 30000; // 30秒タイムアウト
@@ -46,7 +57,7 @@ const server = http.createServer(async (req, res) => {
   const parsedUrl = url.parse(req.url, true);
   let pathname = parsedUrl.pathname;
   
-  console.log(`📍 ${req.method} ${pathname}`);
+  logger.debug(`📍 ${req.method} ${pathname}`); // Phase A2: デバッグレベルに変更
   
   // CORS設定
   Utils.setCORSHeaders(res);
@@ -352,7 +363,7 @@ const server = http.createServer(async (req, res) => {
 // サーバー接続管理
 server.on('connection', (socket) => {
   currentConnections++;
-  console.log(`📊 現在の接続数: ${currentConnections}/${MAX_CONNECTIONS}`);
+  logger.debug(`📊 現在の接続数: ${currentConnections}/${MAX_CONNECTIONS}`); // Phase A2: デバッグレベル
   
   if (currentConnections > MAX_CONNECTIONS) {
     console.log('⚠️  最大接続数を超過しました。接続を閉じます。');
