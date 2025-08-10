@@ -1,0 +1,698 @@
+/* hokkaクイズラリー - モダンUIスタイルシート */
+/* 作成日: 2025-07-14 */
+
+/* === カスタムプロパティ（CSS変数） === */
+:root {
+  /* ビーバー・おかきテーマカラー */
+  --primary: #d2691e;      /* チョコレート色（ビーバーの毛色） */
+  --secondary: #daa520;    /* ゴールデンロッド（おかきの色） */
+  --accent: #cd853f;       /* ペルー色（せんべいの色） */
+  --success: #228b22;      /* フォレストグリーン */
+  --warning: #ff8c00;      /* ダークオレンジ */
+  --error: #dc143c;        /* クリムゾン */
+  
+  /* ニュートラルカラー */
+  --white: #ffffff;
+  --light-gray: #f8f9fa;
+  --gray: #6c757d;
+  --dark-gray: #343a40;
+  --black: #000000;
+  
+  /* レイアウト */
+  --border-radius: 12px;
+  --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  --shadow-hover: 0 8px 15px rgba(0, 0, 0, 0.2);
+  
+  /* フォント */
+  --font-primary: 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Yu Gothic UI', 'Meiryo UI', sans-serif;
+  --font-size-xs: 0.75rem;
+  --font-size-sm: 0.875rem;
+  --font-size-base: 1rem;
+  --font-size-lg: 1.125rem;
+  --font-size-xl: 1.25rem;
+  --font-size-2xl: 1.5rem;
+  --font-size-3xl: 1.875rem;
+}
+
+/* === リセット・基本設定 === */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--font-primary);
+  font-size: var(--font-size-base);
+  line-height: 1.6;
+  color: var(--dark-gray);
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  min-height: 100vh;
+}
+
+/* === コンテナ・レイアウト === */
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+.header {
+  background: linear-gradient(135deg, #f5e6d3 0%, #ffe8cc 100%);
+  color: var(--dark);
+  padding: 1rem 0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  border-bottom: 1px solid rgba(210, 105, 30, 0.1);
+}
+
+.header h1 {
+  font-size: var(--font-size-3xl);
+  font-weight: 700;
+  text-align: center;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+  color: var(--primary);
+}
+
+.main {
+  padding: 2rem 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.footer {
+  background: var(--dark-gray);
+  color: var(--white);
+  text-align: center;
+  padding: 1rem 0;
+  margin-top: auto;
+}
+
+/* === カード・パネル === */
+.card {
+  background: var(--white);
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow);
+  padding: 2rem;
+  margin-bottom: 1.5rem;
+  transition: box-shadow 0.2s ease;
+}
+
+.card:hover:not(.login-card) {
+  box-shadow: var(--shadow-hover);
+  transform: translateY(-2px);
+}
+
+.card-header {
+  border-bottom: 2px solid var(--light-gray);
+  padding-bottom: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.card-header h2 {
+  color: var(--primary);
+  font-size: var(--font-size-2xl);
+  font-weight: 600;
+}
+
+.card-body {
+  padding: 0;
+}
+
+/* === ボタン === */
+.btn {
+  display: inline-block;
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: var(--border-radius);
+  font-size: var(--font-size-base);
+  font-weight: 500;
+  text-decoration: none;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  will-change: transform;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+  color: var(--white);
+}
+
+.btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+  transition: all 0.15s ease;
+}
+
+.btn-success {
+  background: var(--success);
+  color: var(--white);
+}
+
+.btn-warning {
+  background: var(--warning);
+  color: var(--white);
+}
+
+.btn-danger {
+  background: var(--error);
+  color: var(--white);
+}
+
+.btn-outline {
+  background: transparent;
+  color: var(--primary);
+  border: 2px solid var(--primary);
+}
+
+.btn-outline:hover {
+  background: var(--primary);
+  color: var(--white);
+}
+
+.btn-large {
+  padding: 1rem 2rem;
+  font-size: var(--font-size-lg);
+}
+
+.btn-small {
+  padding: 0.5rem 1rem;
+  font-size: var(--font-size-sm);
+}
+
+.btn-block {
+  width: 100%;
+  display: block;
+}
+
+/* === フォーム === */
+.form-group {
+  margin-bottom: 1.5rem;
+}
+
+.form-label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+  color: var(--dark-gray);
+}
+
+.form-input {
+  width: 100%;
+  padding: 0.75rem;
+  border: 2px solid var(--light-gray);
+  border-radius: var(--border-radius);
+  font-size: var(--font-size-base);
+  transition: border-color 0.3s ease;
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(210, 105, 30, 0.1);
+}
+
+.form-select {
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 0.7rem center;
+  background-size: 1rem;
+  padding-right: 2.5rem;
+}
+
+/* === クイズ特有のスタイル === */
+.quiz-container {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.question-card {
+  background: var(--white);
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow);
+  padding: 2rem;
+  margin-bottom: 2rem;
+}
+
+.question-number {
+  background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+  color: var(--white);
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--font-size-xl);
+  font-weight: 700;
+  margin-bottom: 1rem;
+}
+
+.question-text {
+  font-size: var(--font-size-lg);
+  font-weight: 500;
+  margin-bottom: 1.5rem;
+  line-height: 1.7;
+}
+
+.choices {
+  display: grid;
+  gap: 1rem;
+}
+
+.choice-item {
+  background: var(--light-gray);
+  border: 2px solid transparent;
+  border-radius: var(--border-radius);
+  padding: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.choice-item:hover:not(.selected) {
+  background: rgba(210, 105, 30, 0.1);
+  border-color: var(--primary);
+  transform: translateY(-1px);
+}
+
+.choice-item.selected {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow);
+}
+
+.choice-item.correct {
+  background: rgba(34, 139, 34, 0.2);
+  border-color: var(--success);
+}
+
+.choice-item.incorrect {
+  background: rgba(220, 20, 60, 0.2);
+  border-color: var(--error);
+}
+
+.choice-label {
+  font-weight: 600;
+  color: var(--primary);
+  margin-right: 0.5rem;
+}
+
+.choice-text {
+  font-size: var(--font-size-base);
+}
+
+/* === 進捗バー === */
+.progress-container {
+  background: var(--light-gray);
+  border-radius: var(--border-radius);
+  height: 8px;
+  margin-bottom: 2rem;
+  overflow: hidden;
+}
+
+.progress-bar {
+  background: linear-gradient(90deg, var(--primary) 0%, var(--secondary) 100%);
+  height: 100%;
+  transition: width 0.3s ease;
+}
+
+/* === ランキング === */
+.ranking-item {
+  display: flex;
+  align-items: center;
+  padding: 1rem;
+  background: var(--white);
+  border-radius: var(--border-radius);
+  margin-bottom: 0.5rem;
+  box-shadow: var(--shadow);
+}
+
+.rank-position {
+  background: var(--accent);
+  color: var(--white);
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  margin-right: 1rem;
+}
+
+.rank-position.gold {
+  background: #ffd700;
+  color: var(--dark-gray);
+}
+
+.rank-position.silver {
+  background: #c0c0c0;
+  color: var(--dark-gray);
+}
+
+.rank-position.bronze {
+  background: #cd7f32;
+  color: var(--white);
+}
+
+.rank-info {
+  flex: 1;
+}
+
+.rank-nickname {
+  font-weight: 600;
+  font-size: var(--font-size-lg);
+}
+
+.rank-score {
+  color: var(--gray);
+  font-size: var(--font-size-sm);
+}
+
+/* === ユーティリティクラス === */
+.text-center { text-align: center; }
+.text-left { text-align: left; }
+.text-right { text-align: right; }
+
+.mb-1 { margin-bottom: 0.25rem; }
+.mb-2 { margin-bottom: 0.5rem; }
+.mb-3 { margin-bottom: 1rem; }
+.mb-4 { margin-bottom: 1.5rem; }
+.mb-5 { margin-bottom: 2rem; }
+
+.mt-1 { margin-top: 0.25rem; }
+.mt-2 { margin-top: 0.5rem; }
+.mt-3 { margin-top: 1rem; }
+.mt-4 { margin-top: 1.5rem; }
+.mt-5 { margin-top: 2rem; }
+
+.hidden { display: none; }
+.visible { display: block; }
+
+/* === レスポンシブデザイン === */
+@media (max-width: 768px) {
+  .container {
+    padding: 0 15px;
+  }
+  
+  .header h1 {
+    font-size: var(--font-size-2xl);
+  }
+  
+  .card {
+    padding: 1.5rem;
+  }
+  
+  .question-card {
+    padding: 1.5rem;
+  }
+  
+  .btn {
+    padding: 0.6rem 1.2rem;
+  }
+  
+  .choices {
+    gap: 0.8rem;
+  }
+  
+  .choice-item {
+    padding: 0.8rem;
+  }
+}
+
+/* === アニメーション - 最適化版 === */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translate3d(0, 20px, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translate3d(-20px, 0, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+
+.fade-in {
+  animation: fadeIn 0.4s ease-out;
+  will-change: opacity, transform;
+}
+
+.slide-in {
+  animation: slideIn 0.4s ease-out;
+  will-change: opacity, transform;
+}
+
+/* === ローディング === */
+.loading {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: var(--white);
+  animation: spin 1s ease-in-out infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes bounce {
+  0%, 20%, 50%, 80%, 100% { transform: translate3d(0, 0, 0); }
+  40% { transform: translate3d(0, -10px, 0); }
+  60% { transform: translate3d(0, -5px, 0); }
+}
+
+/* === レスポンシブ アクションボタン === */
+.action-buttons {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+/* === モバイル対応 === */
+@media (max-width: 768px) {
+  /* コンテナ */
+  .container {
+    padding: 0 1rem;
+  }
+
+  /* カード */
+  .card {
+    margin-bottom: 1rem;
+    padding: 1rem;
+  }
+
+  /* ボタン */
+  .action-buttons {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+    margin-top: 1.5rem;
+  }
+
+  .btn-large {
+    padding: 0.875rem 1.25rem;
+    font-size: var(--font-size-base);
+  }
+
+  /* ヘッダー */
+  .header h1 {
+    font-size: 1.5rem;
+  }
+
+  .header .container > div {
+    flex-direction: column;
+    gap: 0.5rem;
+    align-items: stretch;
+  }
+
+  /* クイズナビゲーション */
+  .quiz-navigation {
+    flex-direction: column;
+    gap: 1rem;
+    align-items: stretch !important;
+  }
+
+  .quiz-navigation .quiz-status {
+    order: -1;
+    text-align: center !important;
+  }
+
+  /* 問題サマリー */
+  #question-summary {
+    grid-template-columns: repeat(auto-fill, minmax(50px, 1fr));
+    gap: 0.25rem;
+  }
+
+  /* ランキング項目 */
+  .ranking-item {
+    flex-direction: column;
+    text-align: center;
+    padding: 1.5rem 1rem;
+  }
+
+  .rank-position {
+    margin-right: 0;
+    margin-bottom: 1rem;
+  }
+
+  .rank-info {
+    margin-right: 0;
+    margin-bottom: 1rem;
+  }
+
+  /* 統計項目 */
+  .stat-item {
+    padding: 1rem;
+  }
+
+  /* 進捗バー */
+  .progress-container {
+    margin: 1rem 0;
+  }
+
+  /* フォーム */
+  .form-group {
+    margin-bottom: 1rem;
+  }
+
+  /* フッター */
+  .footer {
+    padding: 1.5rem 0;
+    font-size: var(--font-size-sm);
+  }
+}
+
+/* === タブレット対応 === */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .action-buttons {
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 0.875rem;
+  }
+
+  .container {
+    padding: 0 1.5rem;
+  }
+
+  .header h1 {
+    font-size: 1.75rem;
+  }
+}
+
+/* === デスクトップ最適化 === */
+@media (min-width: 1025px) {
+  .action-buttons {
+    max-width: 800px;
+    margin: 2rem auto;
+  }
+
+  .quiz-container {
+    max-width: 900px;
+  }
+
+  .card {
+    max-width: 1000px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+}
+
+/* === 小さなスマートフォン対応 === */
+@media (max-width: 480px) {
+  .action-buttons {
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+  }
+
+  .btn {
+    padding: 0.75rem 1rem;
+    font-size: var(--font-size-sm);
+  }
+
+  .btn-large {
+    padding: 0.875rem 1rem;
+    font-size: var(--font-size-base);
+  }
+
+  .header h1 {
+    font-size: 1.25rem;
+  }
+
+  .card {
+    padding: 0.75rem;
+  }
+
+  .card-header h2 {
+    font-size: var(--font-size-xl);
+  }
+
+  /* 選択肢 */
+  .choice-item {
+    padding: 0.5rem;
+    margin-bottom: 0.25rem;
+  }
+
+  .choice-label {
+    margin-right: 0.5rem;
+  }
+}
+
+/* === 解答確認画面スタイル === */
+.question-number {
+  background: var(--warning);
+  color: white !important;
+  padding: 0.3rem 0.6rem;
+  border-radius: 50px;
+  font-weight: 600;
+  font-size: 0.8rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 70px;
+  white-space: nowrap;
+}
+
+.answer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.question-info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.answer-status {
+  font-weight: 500;
+}
+
+.answer-status.correct {
+  color: var(--success);
+}
+
+.answer-status.incorrect {
+  color: var(--error);
+}
+
+.answer-status.unanswered {
+  color: var(--gray);
+}

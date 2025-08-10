@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🦫 hokkaクイズラリー - ランキング</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <!-- ヘッダー -->
+    <header class="header">
+        <div class="container">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h1 style="display: flex; align-items: center;">
+                    <img src="/images/beaver-logo.png" alt="ビーバーロゴ" style="height: 50px; margin-right: 15px;">
+                    hokkaクイズラリー
+                </h1>
+                <button onclick="Auth.logout()" class="btn btn-secondary btn-small">ログアウト</button>
+            </div>
+        </div>
+    </header>
+
+    <!-- メインコンテンツ -->
+    <main class="main">
+        <div class="container">
+            <!-- ページタイトル -->
+            <div class="card text-center fade-in">
+                <div class="card-header">
+                    <h2>🏆 ランキング</h2>
+                </div>
+                <div class="card-body">
+                    <p>hokkaクイズラリーの参加者ランキングです！</p>
+                    <p style="color: var(--gray); font-size: var(--font-size-sm);">
+                        リアルタイムで更新されています
+                    </p>
+                </div>
+            </div>
+
+            <!-- 統計情報 -->
+            <div class="card slide-in" style="animation-delay: 0.2s;">
+                <div class="card-header">
+                    <h3>📊 参加状況</h3>
+                </div>
+                <div class="card-body">
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem;">
+                        <div class="stat-item text-center">
+                            <div style="font-size: 2rem; font-weight: 700; color: var(--primary);" id="total-participants">-</div>
+                            <div style="color: var(--gray);">総参加者数</div>
+                        </div>
+                        <div class="stat-item text-center">
+                            <div style="font-size: 2rem; font-weight: 700; color: var(--secondary);" id="avg-score">-</div>
+                            <div style="color: var(--gray);">平均スコア</div>
+                        </div>
+                        <div class="stat-item text-center">
+                            <div style="font-size: 2rem; font-weight: 700; color: var(--success);" id="perfect-scores">-</div>
+                            <div style="color: var(--gray);">満点者数</div>
+                        </div>
+                        <div class="stat-item text-center">
+                            <div style="font-size: 2rem; font-weight: 700; color: var(--accent);" id="completion-rate">-%</div>
+                            <div style="color: var(--gray);">完走率</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TOP 3 表彰台 -->
+            <div class="card slide-in" style="animation-delay: 0.4s;">
+                <div class="card-header text-center">
+                    <h3>🥇 TOP 3 表彰台</h3>
+                </div>
+                <div class="card-body">
+                    <div id="podium" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem;">
+                        <!-- TOP3がここに表示されます -->
+                        <div class="text-center" style="color: var(--gray); padding: 2rem;">
+                            <img src="/images/beaver.png" alt="ビーバーキャラクター" style="height: 100px; margin-bottom: 1rem; opacity: 0.7;">
+                            <p>まだ参加者がいません</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 全ランキング -->
+            <div class="card slide-in" style="animation-delay: 0.6s;">
+                <div class="card-header">
+                    <h3>📋 全ランキング</h3>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1rem;">
+                        <div style="color: var(--gray); font-size: var(--font-size-sm);">
+                            最新の結果が表示されています
+                        </div>
+                        <button onclick="refreshRanking()" class="btn btn-outline btn-small">
+                            🔄 更新
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div id="ranking-list">
+                        <!-- ランキングリストがここに表示されます -->
+                        <div class="text-center" style="padding: 2rem; color: var(--gray);">
+                            <div class="loading" style="margin: 20px auto;"></div>
+                            <p>ランキングを読み込み中...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- アクションボタン -->
+            <div class="text-center mt-4">
+                <div class="action-buttons">
+                    <a href="/mypage" class="btn btn-secondary btn-large">
+                        🏠 マイページ
+                    </a>
+                    <a href="/quiz" class="btn btn-primary btn-large">
+                        📝 クイズに挑戦
+                    </a>
+                    <a href="/survey" class="btn btn-success btn-large">
+                        🎁 アンケートに回答
+                    </a>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- フッター -->
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2025 金沢学院大学附属中学校２年１組 - hokkaクイズラリー</p>
+        </div>
+    </footer>
+
+    <!-- JavaScript -->
+    <script src="/js/app.js"></script>
+
+    <!-- ランキングページ固有のスクリプト -->
+    <script>
+        // ページ読み込み時の初期化
+        document.addEventListener('DOMContentLoaded', async () => {
+            await loadRankingData();
+        });
+
+        // ランキングデータ読み込み
+        async function loadRankingData() {
+            try {
+                // 実際のAPIからランキングデータを取得
+                const rankings = await Ranking.getRanking();
+                
+                if (rankings && rankings.length > 0) {
+                    displayStats(rankings);
+                    displayPodium(rankings.slice(0, 3));
+                    displayFullRanking(rankings);
+                } else {
+                    // データがない場合の表示
+                    const noDataMessage = `
+                        <div class="text-center" style="padding: 2rem; color: var(--gray);">
+                            <p>まだ参加者がいません。最初の挑戦者になりませんか？</p>
+                            <a href="/quiz" class="btn btn-primary">クイズに挑戦する</a>
+                        </div>
+                    `;
+                    Utils.$('#podium').innerHTML = noDataMessage;
+                    Utils.$('#ranking-list').innerHTML = noDataMessage;
+                }
+
+            } catch (error) {
+                console.error('ランキング読み込みエラー:', error);
+                Utils.showError('ランキングの読み込みに失敗しました');
+            }
+        }
+
+        // 統計情報表示
+        function displayStats(rankings) {
+            const totalParticipants = rankings.length;
+            const avgScore = Math.round(rankings.reduce((sum, r) => sum + r.final_score, 0) / totalParticipants);
+            const perfectScores = rankings.filter(r => r.final_score === 100).length;
+            const completionRate = 95; // デモ用固定値
+
+            Utils.$('#total-participants').textContent = totalParticipants;
+            Utils.$('#avg-score').textContent = avgScore + '点';
+            Utils.$('#perfect-scores').textContent = perfectScores + '人';
+            Utils.$('#completion-rate').textContent = completionRate + '%';
+        }
+
+        // 表彰台表示
+        function displayPodium(top3) {
+            const podiumContainer = Utils.$('#podium');
+            if (!podiumContainer || top3.length === 0) return;
+
+            const podiumHtml = top3.map((user, index) => {
+                const position = index + 1;
+                let medal, bgColor, textColor;
+
+                switch (position) {
+                    case 1:
+                        medal = '🥇';
+                        bgColor = 'linear-gradient(135deg, #ffd700 0%, #ffed4e 100%)';
+                        textColor = '#333';
+                        break;
+                    case 2:
+                        medal = '🥈';
+                        bgColor = 'linear-gradient(135deg, #c0c0c0 0%, #e8e8e8 100%)';
+                        textColor = '#333';
+                        break;
+                    case 3:
+                        medal = '🥉';
+                        bgColor = 'linear-gradient(135deg, #cd7f32 0%, #daa520 100%)';
+                        textColor = '#fff';
+                        break;
+                }
+
+                return `
+                    <div class="podium-item text-center" style="
+                        background: ${bgColor}; 
+                        color: ${textColor}; 
+                        padding: 2rem; 
+                        border-radius: var(--border-radius);
+                        box-shadow: var(--shadow);
+                        animation: fadeIn 0.5s ease-out ${index * 0.2}s both;
+                    ">
+                        <div style="font-size: 3rem; margin-bottom: 0.5rem;">${medal}</div>
+                        <div style="font-size: 1.5rem; font-weight: 700; margin-bottom: 0.5rem;">
+                            ${user.nickname}
+                        </div>
+                        <div style="font-size: 2rem; font-weight: 700; margin-bottom: 0.5rem;">
+                            ${user.final_score}点
+                        </div>
+                        <div style="font-size: 1rem; opacity: 0.8;">
+                            ${user.correct_answers}/10問正解
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            podiumContainer.innerHTML = podiumHtml;
+        }
+
+        // 全ランキング表示
+        function displayFullRanking(rankings) {
+            const rankingContainer = Utils.$('#ranking-list');
+            if (!rankingContainer) return;
+
+            if (rankings.length === 0) {
+                rankingContainer.innerHTML = `
+                    <div class="text-center" style="padding: 2rem; color: var(--gray);">
+                        まだ参加者がいません。あなたが最初の挑戦者になりませんか？
+                    </div>
+                `;
+                return;
+            }
+
+            const rankingHtml = rankings.map((user, index) => {
+                const position = index + 1;
+                let rankClass = '';
+                let rankIcon = position;
+
+                if (position <= 3) {
+                    rankClass = ['gold', 'silver', 'bronze'][position - 1];
+                    rankIcon = ['🥇', '🥈', '🥉'][position - 1];
+                }
+
+                const ageGroupText = {
+                    'preschool': 'ようちえん・ほいくえん',
+                    'elementary': '小学生',
+                    'junior_high': '中学生',
+                    'high_school': '高校生',
+                    'adult': '大人'
+                }[user.age_group] || '不明';
+
+                return `
+                    <div class="ranking-item fade-in" style="animation-delay: ${index * 0.05}s;">
+                        <div class="rank-position ${rankClass}">${rankIcon}</div>
+                        <div class="rank-info">
+                            <div class="rank-nickname">${user.nickname}</div>
+                            <div class="rank-score">
+                                ${user.final_score}点 (${user.correct_answers}/10問正解) - ${ageGroupText}
+                            </div>
+                        </div>
+                        <div class="rank-badge" style="
+                            background: ${getScoreBadgeColor(user.final_score)};
+                            color: white;
+                            padding: 0.25rem 0.75rem;
+                            border-radius: 20px;
+                            font-size: var(--font-size-sm);
+                            font-weight: 600;
+                        ">
+                            ${getScoreGrade(user.final_score)}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            rankingContainer.innerHTML = rankingHtml;
+        }
+
+        // スコアバッジの色を取得
+        function getScoreBadgeColor(score) {
+            if (score >= 90) return 'var(--success)';
+            if (score >= 70) return 'var(--primary)';
+            if (score >= 50) return 'var(--secondary)';
+            return 'var(--gray)';
+        }
+
+        // スコアグレードを取得
+        function getScoreGrade(score) {
+            if (score >= 90) return 'エクセレント';
+            if (score >= 70) return 'グッド';
+            if (score >= 50) return 'ナイス';
+            return 'チャレンジ';
+        }
+
+        // ランキング更新
+        async function refreshRanking() {
+            const refreshBtn = event.target;
+            refreshBtn.disabled = true;
+            refreshBtn.textContent = '更新中...';
+
+            // ローディング表示
+            Utils.$('#ranking-list').innerHTML = `
+                <div class="text-center" style="padding: 2rem; color: var(--gray);">
+                    <div class="loading" style="margin: 20px auto;"></div>
+                    <p>最新データを読み込み中...</p>
+                </div>
+            `;
+
+            try {
+                // 実際のAPIから最新データを取得
+                await loadRankingData();
+                Utils.showSuccess('ランキングを更新しました！');
+            } catch (error) {
+                Utils.showError('更新に失敗しました');
+            } finally {
+                refreshBtn.disabled = false;
+                refreshBtn.textContent = '🔄 更新';
+            }
+        }
+    </script>
+
+    <!-- ランキング用追加CSS -->
+    <style>
+        .podium-item {
+            transition: transform 0.3s ease;
+        }
+
+        .podium-item:hover {
+            transform: translateY(-5px);
+        }
+
+        .ranking-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1rem;
+            background: var(--white);
+            border-radius: var(--border-radius);
+            margin-bottom: 0.5rem;
+            box-shadow: var(--shadow);
+            transition: all 0.3s ease;
+        }
+
+        .ranking-item:hover {
+            transform: translateX(5px);
+            box-shadow: var(--shadow-hover);
+        }
+
+        .rank-position {
+            background: var(--accent);
+            color: var(--white);
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: var(--font-size-lg);
+            margin-right: 1rem;
+            flex-shrink: 0;
+        }
+
+        .rank-position.gold {
+            background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
+            color: var(--dark-gray);
+        }
+
+        .rank-position.silver {
+            background: linear-gradient(135deg, #c0c0c0 0%, #e8e8e8 100%);
+            color: var(--dark-gray);
+        }
+
+        .rank-position.bronze {
+            background: linear-gradient(135deg, #cd7f32 0%, #daa520 100%);
+            color: var(--white);
+        }
+
+        .rank-info {
+            flex: 1;
+            margin-right: 1rem;
+        }
+
+        .rank-nickname {
+            font-weight: 600;
+            font-size: var(--font-size-lg);
+            margin-bottom: 0.25rem;
+        }
+
+        .rank-score {
+            color: var(--gray);
+            font-size: var(--font-size-sm);
+        }
+
+        .rank-badge {
+            flex-shrink: 0;
+        }
+
+        @media (max-width: 768px) {
+            .ranking-item {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .rank-position {
+                margin-right: 0;
+                margin-bottom: 1rem;
+            }
+
+            .rank-info {
+                margin-right: 0;
+                margin-bottom: 1rem;
+            }
+        }
+    </style>
+</body>
+</html>

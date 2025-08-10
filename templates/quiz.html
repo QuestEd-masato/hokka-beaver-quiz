@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🦫 hokkaクイズラリー - クイズ挑戦中</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <!-- ヘッダー -->
+    <header class="header">
+        <div class="container">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h1 style="display: flex; align-items: center;">
+                    <img src="/images/beaver-logo.png" alt="ビーバーロゴ" style="height: 50px; margin-right: 15px;">
+                    hokkaクイズラリー
+                </h1>
+                <button onclick="Auth.logout()" class="btn btn-secondary btn-small">ログアウト</button>
+            </div>
+        </div>
+    </header>
+
+    <!-- メインコンテンツ -->
+    <main class="main">
+        <div class="container">
+            <!-- ユーザー情報バー -->
+            <div class="card mb-3" style="padding: 1rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div style="display: flex; align-items: center; gap: 1rem;">
+                        <img src="/images/beaver.png" alt="ビーバーキャラクター" style="height: 60px;">
+                        <div>
+                            <strong id="user-nickname">ゲスト</strong>さん、クイズに挑戦中！
+                        </div>
+                    </div>
+                    <div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 進捗バー -->
+            <div class="progress-container">
+                <div class="progress-bar" id="progress-bar" style="width: 10%;"></div>
+            </div>
+            <div class="text-center mb-4">
+                <span id="progress-text">問題 1 / 10</span>
+            </div>
+
+            <!-- エラー・成功メッセージ -->
+            <div id="error-message" class="alert alert-error" style="display: none;"></div>
+            <div id="success-message" class="alert alert-success" style="display: none;"></div>
+
+            <!-- クイズコンテナ -->
+            <div class="quiz-container">
+                <div id="question-container">
+                    <!-- 解答欄のみ表示（問題文は紙ベース） -->
+                    <div class="text-center" style="padding: 50px;">
+                        <div class="loading" style="margin: 20px auto;"></div>
+                        <p>解答フォームを読み込み中...</p>
+                    </div>
+                </div>
+
+                <!-- ナビゲーションボタン -->
+                <div class="quiz-navigation" style="display: flex; justify-content: space-between; align-items: center; margin-top: 2rem;">
+                    <button id="prev-btn" onclick="Quiz.prevQuestion()" class="btn btn-outline" style="display: none;">
+                        ← 前の問題
+                    </button>
+                    
+                    <div class="quiz-status" style="text-align: center;">
+                        <div id="answered-count" style="color: var(--gray); font-size: var(--font-size-sm);">
+                            解答済み: <span id="answered-num">0</span> / 10
+                        </div>
+                    </div>
+                    
+                    <button id="next-btn" onclick="Quiz.nextQuestion()" class="btn btn-primary" style="display: none;">
+                        次の問題 →
+                    </button>
+                    
+                    <button id="submit-btn" onclick="Quiz.submitQuiz()" class="btn btn-success btn-large" style="display: none;">
+                        🎯 クイズを完了する
+                    </button>
+                </div>
+
+                <!-- 問題一覧（サマリー） -->
+                <div class="card mt-4">
+                    <div class="card-header">
+                        <h3>📝 解答状況</h3>
+                    </div>
+                    <div class="card-body">
+                        <div id="question-summary" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(60px, 1fr)); gap: 0.5rem;">
+                            <!-- 問題サマリーがここに表示されます -->
+                        </div>
+                        <div class="mt-3" style="color: var(--gray); font-size: var(--font-size-sm);">
+                            <p>💡 <strong>ヒント</strong>: 各番号をクリックするとその問題にジャンプできます</p>
+                            <p>💾 解答は自動的に保存されるので、安心してお楽しみください</p>
+                        </div>
+                        
+                        <!-- マイページボタン -->
+                        <div class="text-center mt-3">
+                            <a href="/mypage" class="btn btn-secondary">
+                                🏠 マイページに戻る
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- フッター -->
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2025 金沢学院大学附属中学校２年１組 - hokkaクイズラリー</p>
+        </div>
+    </footer>
+
+    <!-- JavaScript -->
+    <script src="/js/app.js"></script>
+
+    <!-- クイズページ固有のスクリプト -->
+    <script>
+        // ページ読み込み時の初期化
+        document.addEventListener('DOMContentLoaded', async () => {
+            // 認証確認（シンプル化）
+            if (!Auth.isAuthenticated()) {
+                window.location.href = '/?redirect=' + encodeURIComponent(window.location.pathname);
+                return;
+            }
+
+            // ユーザー名表示
+            const userNickname = Utils.$('#user-nickname');
+            if (userNickname && AppState.currentUser) {
+                userNickname.textContent = AppState.currentUser.nickname;
+            }
+
+            // クイズ初期化
+            await Quiz.initQuiz();
+            
+            // 問題サマリー作成
+            createQuestionSummary();
+            
+            // 解答状況更新
+            updateQuizStatus();
+        });
+
+        // 問題サマリー作成
+        function createQuestionSummary() {
+            const summaryContainer = Utils.$('#question-summary');
+            const summaryHtml = [];
+            
+            for (let i = 1; i <= 10; i++) {
+                const isAnswered = AppState.answers[i] ? 'answered' : '';
+                const isCurrent = i === AppState.currentQuestion ? 'current' : '';
+                
+                summaryHtml.push(`
+                    <button class="question-summary-btn ${isAnswered} ${isCurrent}" 
+                            onclick="jumpToQuestion(${i})" 
+                            data-question="${i}">
+                        ${i}
+                    </button>
+                `);
+            }
+            
+            summaryContainer.innerHTML = summaryHtml.join('');
+        }
+
+        // 問題ジャンプ
+        function jumpToQuestion(questionNumber) {
+            AppState.currentQuestion = questionNumber;
+            Quiz.displayQuestion(questionNumber);
+            Quiz.updateNavigation();
+            updateQuizStatus();
+            createQuestionSummary();
+        }
+
+        // クイズ状況更新
+        function updateQuizStatus() {
+            const answeredCount = Object.keys(AppState.answers).length;
+            const answeredNum = Utils.$('#answered-num');
+            const progressText = Utils.$('#progress-text');
+            
+            if (answeredNum) {
+                answeredNum.textContent = answeredCount;
+            }
+            
+            if (progressText) {
+                progressText.textContent = `問題 ${AppState.currentQuestion} / 10`;
+            }
+            
+            Utils.updateProgressBar(AppState.currentQuestion, 10);
+        }
+
+        // クイズ機能拡張（quiz.html専用）
+        // Quiz.displayQuestionとQuiz.selectAnswerにUI更新機能を追加
+        const originalDisplayQuestion = Quiz.displayQuestion;
+        const originalSelectAnswer = Quiz.selectAnswer;
+        
+        Quiz.displayQuestion = function(questionNumber) {
+            originalDisplayQuestion.call(this, questionNumber);
+            updateQuizStatus();
+            createQuestionSummary();
+        };
+
+        Quiz.selectAnswer = async function(questionNumber, choice) {
+            await originalSelectAnswer.call(this, questionNumber, choice);
+            updateQuizStatus();
+            createQuestionSummary();
+        };
+    </script>
+
+    <!-- 問題サマリー用CSS -->
+    <style>
+        .question-summary-btn {
+            padding: 0.5rem;
+            border: 2px solid var(--light-gray);
+            border-radius: 8px;
+            background: var(--white);
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            font-size: var(--font-size-sm);
+        }
+
+        .question-summary-btn:hover {
+            border-color: var(--primary);
+            background: rgba(210, 105, 30, 0.1);
+        }
+
+        .question-summary-btn.answered {
+            background: var(--success);
+            color: var(--white);
+            border-color: var(--success);
+        }
+
+        .question-summary-btn.current {
+            border-color: var(--primary);
+            background: var(--primary);
+            color: var(--white);
+        }
+
+        .question-summary-btn.answered.current {
+            background: var(--secondary);
+            border-color: var(--secondary);
+        }
+
+        .alert {
+            padding: 1rem;
+            border-radius: var(--border-radius);
+            margin-bottom: 1rem;
+        }
+
+        .alert-error {
+            background: rgba(220, 20, 60, 0.1);
+            color: var(--error);
+            border: 1px solid var(--error);
+        }
+
+        .alert-success {
+            background: rgba(34, 139, 34, 0.1);
+            color: var(--success);
+            border: 1px solid var(--success);
+        }
+    </style>
+</body>
+</html>

@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🦫 hokkaクイズラリー - アンケート</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <!-- ヘッダー -->
+    <header class="header">
+        <div class="container">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h1 style="display: flex; align-items: center;">
+                    <img src="/images/beaver-logo.png" alt="ビーバーロゴ" style="height: 50px; margin-right: 15px;">
+                    hokkaクイズラリー
+                </h1>
+                <button onclick="Auth.logout()" class="btn btn-secondary btn-small">ログアウト</button>
+            </div>
+        </div>
+    </header>
+
+    <!-- メインコンテンツ -->
+    <main class="main">
+        <div class="container">
+            <!-- アンケートタイトル -->
+            <div class="card text-center fade-in">
+                <div class="card-header">
+                    <div style="display: flex; align-items: center; justify-content: center; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap;">
+                        <img src="/images/beaver.png" alt="ビーバーキャラクター" style="height: 80px;">
+                        <h2>📝 アンケート</h2>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <p>クイズはいかがでしたか？ご感想をお聞かせください！</p>
+                    <div style="background: linear-gradient(135deg, var(--success) 0%, var(--secondary) 100%); 
+                                color: white; padding: 1rem; border-radius: var(--border-radius); margin: 1rem 0;">
+                        <strong>🎁 ボーナスポイント +10点 獲得のチャンス！</strong>
+                    </div>
+                </div>
+            </div>
+
+            <!-- エラー・成功メッセージ -->
+            <div id="error-message" class="alert alert-error" style="display: none;"></div>
+            <div id="success-message" class="alert alert-success" style="display: none;"></div>
+
+            <!-- アンケートフォーム -->
+            <form id="survey-form" class="card slide-in" style="animation-delay: 0.2s;">
+                <div class="card-header">
+                    <h3>ご質問にお答えください</h3>
+                </div>
+                <div class="card-body">
+                    <div id="survey-questions">
+                        <!-- アンケート質問がここに動的に表示されます -->
+                        <div class="text-center" style="padding: 2rem;">
+                            <div class="loading" style="margin: 20px auto;"></div>
+                            <p>アンケートを読み込み中...</p>
+                        </div>
+                    </div>
+
+                    <!-- 提出ボタン -->
+                    <div class="text-center mt-4">
+                        <button type="submit" class="btn btn-success btn-large">
+                            🎁 アンケートを提出してボーナスGET（+10点）
+                        </button>
+                    </div>
+                </div>
+            </form>
+
+            <!-- アンケート管理（アドミン用） -->
+            <div id="admin-section" class="card slide-in" style="animation-delay: 0.4s; display: none;">
+                <div class="card-header">
+                    <h3>🔧 アンケート管理</h3>
+                    <p style="color: var(--gray); font-size: var(--font-size-sm); margin: 0.5rem 0 0 0;">
+                        アンケート項目を編集できます（管理者のみ）
+                    </p>
+                </div>
+                <div class="card-body">
+                    <div class="admin-section">
+                        <button onclick="toggleAdminMode()" class="btn btn-outline btn-small mb-3">
+                            📝 編集モードを切り替え
+                        </button>
+                        
+                        <div id="admin-mode" style="display: none;">
+                            <!-- アンケート基本設定 -->
+                            <div style="margin-bottom: 2rem; padding: 1rem; background: var(--light-gray); border-radius: var(--border-radius);">
+                                <h4>📝 アンケート基本設定</h4>
+                                <div style="display: grid; gap: 1rem;">
+                                    <div>
+                                        <label for="survey-q1" style="font-weight: 600; margin-bottom: 0.25rem; display: block;">質問1（満足度）</label>
+                                        <input type="text" id="survey-q1" class="form-input" value="ビーバーほっかクイズはいかがでしたか？" maxlength="200">
+                                        <small style="color: var(--gray);">選択肢: とても楽しかった / 楽しかった / 普通 / つまらなかった</small>
+                                    </div>
+                                    <div>
+                                        <label for="survey-q2" style="font-weight: 600; margin-bottom: 0.25rem; display: block;">質問2（自由記述）</label>
+                                        <input type="text" id="survey-q2" class="form-input" value="感想やご意見をお聞かせください" maxlength="200">
+                                        <small style="color: var(--gray);">回答者が自由に記述できる質問です</small>
+                                    </div>
+                                    <div>
+                                        <label for="bonus-points" style="font-weight: 600; margin-bottom: 0.25rem; display: block;">ボーナスポイント</label>
+                                        <input type="number" id="bonus-points" class="form-input" value="10" min="0" max="20">
+                                        <small style="color: var(--gray);">アンケート回答者に付与されるボーナスポイント</small>
+                                    </div>
+                                    <button onclick="saveSurveySettings()" class="btn btn-success">
+                                        💾 設定を保存
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- 新しい質問追加 -->
+                            <div style="margin-bottom: 2rem;">
+                                <h4>➕ 新しい質問を追加</h4>
+                                <div style="display: grid; gap: 1rem;">
+                                    <input type="text" id="new-question-text" class="form-input" 
+                                           placeholder="質問文を入力">
+                                    <select id="new-question-type" class="form-input form-select">
+                                        <option value="rating">評価（1-5点）</option>
+                                        <option value="choice">選択肢</option>
+                                        <option value="text">自由記述</option>
+                                    </select>
+                                    <input type="text" id="new-question-options" class="form-input" 
+                                           placeholder="選択肢（カンマ区切り、選択肢タイプの場合のみ）">
+                                    <button onclick="addQuestion()" class="btn btn-primary">
+                                        ➕ 質問を追加
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <!-- 既存質問一覧 -->
+                            <div style="margin-bottom: 2rem;">
+                                <h4>📋 既存の質問管理</h4>
+                                <div id="question-list">
+                                    <!-- 既存質問リストが表示されます -->
+                                </div>
+                            </div>
+
+                            <!-- 統計情報 -->
+                            <div style="margin-bottom: 2rem; padding: 1rem; background: var(--light-gray); border-radius: var(--border-radius);">
+                                <h4>📊 アンケート統計</h4>
+                                <div id="survey-stats" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
+                                    <div class="stat-item" style="text-align: center;">
+                                        <div style="font-size: 1.5rem; font-weight: 700; color: var(--primary);">15</div>
+                                        <div style="font-size: 0.875rem; color: var(--gray);">総回答数</div>
+                                    </div>
+                                    <div class="stat-item" style="text-align: center;">
+                                        <div style="font-size: 1.5rem; font-weight: 700; color: var(--success);">53%</div>
+                                        <div style="font-size: 0.875rem; color: var(--gray);">とても楽しかった</div>
+                                    </div>
+                                    <div class="stat-item" style="text-align: center;">
+                                        <div style="font-size: 1.5rem; font-weight: 700; color: var(--secondary);">33%</div>
+                                        <div style="font-size: 0.875rem; color: var(--gray);">楽しかった</div>
+                                    </div>
+                                    <div class="stat-item" style="text-align: center;">
+                                        <div style="font-size: 1.5rem; font-weight: 700; color: var(--warning);">13%</div>
+                                        <div style="font-size: 0.875rem; color: var(--gray);">普通</div>
+                                    </div>
+                                </div>
+                                <div class="text-center">
+                                    <a href="/api/admin/export/surveys" class="btn btn-secondary">
+                                        📥 アンケート結果をダウンロード
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- アンケート送信 -->
+            <div class="text-center mt-4">
+                <button onclick="submitSurvey()" class="btn btn-success btn-large" id="submit-survey-btn">
+                    🎁 アンケート送信（+10ボーナスポイント）
+                </button>
+            </div>
+
+            <!-- アクションボタン -->
+            <div class="text-center mt-4">
+                <div class="action-buttons">
+                    <a href="/mypage" class="btn btn-secondary btn-large">
+                        🏠 マイページ
+                    </a>
+                    <a href="/ranking" class="btn btn-primary btn-large">
+                        🏆 ランキングを見る
+                    </a>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- フッター -->
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2025 金沢学院大学附属中学校２年１組 - hokkaクイズラリー</p>
+        </div>
+    </footer>
+
+    <!-- JavaScript -->
+    <script src="/js/app.js"></script>
+
+    <!-- アンケートページ固有のスクリプト -->
+    <script>
+        let surveyQuestions = [];
+        let isAdminMode = false;
+
+        // ページ読み込み時の初期化
+        document.addEventListener('DOMContentLoaded', async () => {
+            // 認証チェック（シンプル化）
+            if (!Auth.isAuthenticated()) {
+                window.location.href = '/?redirect=' + encodeURIComponent(window.location.pathname);
+                return;
+            }
+
+            // アンケート初期化（完了状態チェック付き）
+            const shouldContinue = await Survey.initSurvey();
+            if (!shouldContinue) {
+                return; // 完了済みまたはクイズ未完了の場合は通常の処理をスキップ
+            }
+
+            await loadSurveyQuestions();
+            displaySurveyQuestions();
+            checkAdminPermissions();
+            loadExistingQuestions();
+            checkSurveyStatus();
+        });
+
+        // アンケート質問を読み込み
+        async function loadSurveyQuestions() {
+            try {
+                // デフォルトのアンケート質問
+                surveyQuestions = [
+                    {
+                        id: 1,
+                        question_text: '北陸製菓が「お客様に喜んでもらえる商品作り」を大切にしていることがわかりましたか？',
+                        question_type: 'rating',
+                        options: { min: 1, max: 5, labels: ['全くわからない', '少しわかった', 'まあまあわかった', 'よくわかった', 'とてもよくわかった'] }
+                    },
+                    {
+                        id: 2,
+                        question_text: '北陸製菓が安全で美味しいお菓子作りをがんばっていると思いましたか？',
+                        question_type: 'rating',
+                        options: { min: 1, max: 5, labels: ['全くがんばっていない', '少しがんばっている', '普通にがんばっている', 'とてもがんばっている', 'すごくがんばっている'] }
+                    },
+                    {
+                        id: 3,
+                        question_text: '北陸製菓の歴史の長さ（100年以上）についてどう思いましたか？',
+                        question_type: 'choice',
+                        options: ['とてもすごいと思った', 'すごいと思った', '普通だと思った', 'あまり関心がない']
+                    },
+                    {
+                        id: 4,
+                        question_text: 'クイズを通して北陸製菓についてどんなことを学びましたか？',
+                        question_type: 'choice',
+                        options: ['会社の歴史や理念がよくわかった', '安全への取り組みがわかった', 'ビーバーの特徴がわかった', '地域への貢献がわかった']
+                    },
+                    {
+                        id: 5,
+                        question_text: '今回のクイズで一番印象に残ったことを自由にお書きください',
+                        question_type: 'text',
+                        options: null
+                    }
+                ];
+
+                // ローカルストレージから追加された質問を読み込み
+                const savedQuestions = Utils.loadFromStorage('customSurveyQuestions');
+                if (savedQuestions && savedQuestions.length > 0) {
+                    surveyQuestions.push(...savedQuestions);
+                }
+
+            } catch (error) {
+                console.error('アンケート読み込みエラー:', error);
+                Utils.showError('アンケートの読み込みに失敗しました');
+            }
+        }
+
+        // アンケート質問を表示
+        function displaySurveyQuestions() {
+            const container = Utils.$('#survey-questions');
+            if (!container) return;
+
+            const questionsHtml = surveyQuestions.map((question, index) => {
+                return generateQuestionHtml(question, index);
+            }).join('');
+
+            container.innerHTML = questionsHtml;
+        }
+
+        // 質問HTMLを生成
+        function generateQuestionHtml(question, index) {
+            const questionId = `question_${question.id || index}`;
+            
+            switch (question.question_type) {
+                case 'rating':
+                    return `
+                        <div class="form-group">
+                            <label class="form-label">${question.question_text}</label>
+                            <div class="rating-group" style="display: flex; justify-content: space-between; align-items: center; margin: 1rem 0;">
+                                ${Array.from({length: 5}, (_, i) => i + 1).map(rating => `
+                                    <label style="display: flex; flex-direction: column; align-items: center; cursor: pointer;">
+                                        <input type="radio" name="${questionId}" value="${rating}" style="margin-bottom: 0.5rem;">
+                                        <span style="font-size: var(--font-size-sm); text-align: center;">${rating}<br>${question.options.labels[rating - 1]}</span>
+                                    </label>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `;
+                
+                case 'choice':
+                    return `
+                        <div class="form-group">
+                            <label class="form-label">${question.question_text}</label>
+                            <div style="display: grid; gap: 0.5rem; margin: 1rem 0;">
+                                ${question.options.map((option, optIndex) => `
+                                    <label style="display: flex; align-items: center; cursor: pointer; padding: 0.5rem; border-radius: var(--border-radius); border: 1px solid var(--light-gray);">
+                                        <input type="radio" name="${questionId}" value="${option}" style="margin-right: 0.5rem;">
+                                        ${option}
+                                    </label>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `;
+                
+                case 'text':
+                    return `
+                        <div class="form-group">
+                            <label for="${questionId}" class="form-label">${question.question_text}</label>
+                            <textarea id="${questionId}" name="${questionId}" class="form-input" 
+                                      rows="4" placeholder="ご自由にお書きください"></textarea>
+                        </div>
+                    `;
+                
+                default:
+                    return '';
+            }
+        }
+
+        // アンケート提出
+        document.getElementById('survey-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = new FormData(e.target);
+            const answers = {};
+            
+            for (let [key, value] of formData.entries()) {
+                answers[key] = value;
+            }
+
+            try {
+                // アンケート提出API（シンプル版）
+                const result = { success: true, bonusPoints: 10 };
+                
+                if (result.success) {
+                    Utils.showSuccess(`アンケートを提出しました！ボーナス ${result.bonusPoints} ポイントを獲得！`);
+                    Utils.saveToStorage('surveyCompleted', true);
+                    
+                    setTimeout(() => {
+                        window.location.href = '/ranking';
+                    }, 2000);
+                }
+            } catch (error) {
+                Utils.showError('アンケートの提出に失敗しました');
+            }
+        });
+
+        // アンケート設定保存（管理者のみ）
+        function saveSurveySettings() {
+            const user = AppState.currentUser;
+            if (!user || !user.is_admin) {
+                Utils.showError('管理者権限が必要です');
+                return;
+            }
+            
+            const q1 = Utils.$('#survey-q1').value;
+            const q2 = Utils.$('#survey-q2').value;
+            const bonusPoints = parseInt(Utils.$('#bonus-points').value);
+            
+            // ローカルストレージに保存（実際のプロジェクトではAPI呼び出し）
+            const surveySettings = { q1, q2, bonusPoints };
+            Utils.saveToStorage('surveySettings', surveySettings);
+            
+            // ボーナスポイント表示を更新
+            const bonusDisplay = document.querySelector('.card-body [style*="background: linear-gradient"]');
+            if (bonusDisplay) {
+                bonusDisplay.innerHTML = `<strong>🎁 ボーナスポイント +${bonusPoints}点 獲得のチャンス！</strong>`;
+            }
+            
+            Utils.showSuccess('アンケート設定を保存しました！');
+            console.log('保存データ:', surveySettings);
+        }
+
+        // 管理モード切り替え（管理者のみ）
+        function toggleAdminMode() {
+            const user = AppState.currentUser;
+            if (!user || !user.is_admin) {
+                Utils.showError('管理者権限が必要です');
+                return;
+            }
+            
+            isAdminMode = !isAdminMode;
+            const adminSection = Utils.$('#admin-mode');
+            if (adminSection) {
+                adminSection.style.display = isAdminMode ? 'block' : 'none';
+            }
+        }
+
+        // 新しい質問を追加（管理者のみ）
+        function addQuestion() {
+            const user = AppState.currentUser;
+            if (!user || !user.is_admin) {
+                Utils.showError('管理者権限が必要です');
+                return;
+            }
+            
+            const text = Utils.$('#new-question-text').value;
+            const type = Utils.$('#new-question-type').value;
+            const optionsText = Utils.$('#new-question-options').value;
+            
+            if (!text.trim()) {
+                Utils.showError('質問文を入力してください');
+                return;
+            }
+
+            const newQuestion = {
+                id: Date.now(),
+                question_text: text,
+                question_type: type,
+                options: type === 'choice' ? optionsText.split(',').map(s => s.trim()) : 
+                        type === 'rating' ? { min: 1, max: 5, labels: ['1', '2', '3', '4', '5'] } : null
+            };
+
+            surveyQuestions.push(newQuestion);
+            
+            // ローカルストレージに保存
+            const customQuestions = surveyQuestions.filter(q => q.id >= 1000);
+            Utils.saveToStorage('customSurveyQuestions', customQuestions);
+            
+            // 表示を更新
+            displaySurveyQuestions();
+            loadExistingQuestions();
+            
+            // フォームをクリア
+            Utils.$('#new-question-text').value = '';
+            Utils.$('#new-question-options').value = '';
+            
+            Utils.showSuccess('質問を追加しました');
+        }
+
+        // 既存質問一覧を読み込み
+        function loadExistingQuestions() {
+            const container = Utils.$('#question-list');
+            if (!container) return;
+
+            const questionsHtml = surveyQuestions.map((q, index) => `
+                <div style="padding: 1rem; border: 1px solid var(--light-gray); border-radius: var(--border-radius); margin-bottom: 0.5rem;">
+                    <strong>${q.question_text}</strong><br>
+                    <small style="color: var(--gray);">タイプ: ${q.question_type}</small>
+                    ${q.id >= 1000 ? `<button onclick="removeQuestion(${index})" class="btn btn-outline btn-small" style="float: right;">削除</button>` : ''}
+                </div>
+            `).join('');
+
+            container.innerHTML = questionsHtml || '<p style="color: var(--gray);">質問がありません</p>';
+        }
+
+        // 質問を削除（管理者のみ）
+        function removeQuestion(index) {
+            const user = AppState.currentUser;
+            if (!user || !user.is_admin) {
+                Utils.showError('管理者権限が必要です');
+                return;
+            }
+            
+            if (confirm('この質問を削除しますか？')) {
+                surveyQuestions.splice(index, 1);
+                
+                // ローカルストレージを更新
+                const customQuestions = surveyQuestions.filter(q => q.id >= 1000);
+                Utils.saveToStorage('customSurveyQuestions', customQuestions);
+                
+                displaySurveyQuestions();
+                loadExistingQuestions();
+                Utils.showSuccess('質問を削除しました');
+            }
+        }
+
+        // アンケート送信
+        async function submitSurvey() {
+            if (!Auth.isAuthenticated()) {
+                Utils.showError('ログインが必要です');
+                return;
+            }
+
+            // 回答収集
+            const answers = {};
+            const formElements = document.querySelectorAll('#survey-questions input[type="radio"]:checked, #survey-questions input[type="checkbox"]:checked');
+            
+            formElements.forEach(element => {
+                const questionId = element.name;
+                if (!answers[questionId]) {
+                    answers[questionId] = [];
+                }
+                answers[questionId].push(element.value);
+            });
+
+            // テキスト回答収集
+            const textElements = document.querySelectorAll('#survey-questions textarea, #survey-questions input[type="text"]');
+            textElements.forEach(element => {
+                if (element.value.trim()) {
+                    answers[element.name] = element.value.trim();
+                }
+            });
+
+            try {
+                const result = await Utils.apiCall('/api/survey/submit', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        userId: AppState.currentUser.id,
+                        answers: answers
+                    })
+                });
+
+                if (result.success) {
+                    Utils.showSuccess(`アンケートを送信しました！ボーナス${result.bonus_points}ポイントを獲得！`);
+                    
+                    // 送信ボタンを無効化
+                    const submitBtn = Utils.$('#submit-survey-btn');
+                    if (submitBtn) {
+                        submitBtn.disabled = true;
+                        submitBtn.textContent = '✅ 送信完了';
+                        submitBtn.classList.remove('btn-success');
+                        submitBtn.classList.add('btn-outline');
+                    }
+
+                    // アンケート完了をローカルストレージに保存
+                    Utils.saveToStorage('surveyCompleted', true);
+
+                    // 3秒後にランキングページへ
+                    setTimeout(() => {
+                        window.location.href = '/ranking';
+                    }, 3000);
+                }
+            } catch (error) {
+                Utils.showError('アンケートの送信に失敗しました');
+            }
+        }
+
+        // 管理者権限確認
+        function checkAdminPermissions() {
+            const user = AppState.currentUser;
+            const adminSection = Utils.$('#admin-section');
+            
+            if (user && user.is_admin && adminSection) {
+                adminSection.style.display = 'block';
+            }
+        }
+
+        // アンケート状況確認
+        function checkSurveyStatus() {
+            const surveyCompleted = Utils.loadFromStorage('surveyCompleted');
+            const submitBtn = Utils.$('#submit-survey-btn');
+            
+            if (surveyCompleted && submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.textContent = '✅ 送信済み';
+                submitBtn.classList.remove('btn-success');
+                submitBtn.classList.add('btn-outline');
+            }
+        }
+    </script>
+
+    <!-- アンケート用追加CSS -->
+    <style>
+        .rating-group label:hover {
+            background: rgba(210, 105, 30, 0.1);
+            border-radius: var(--border-radius);
+            padding: 0.5rem;
+        }
+
+        .form-group label[style*="cursor: pointer"]:hover {
+            background: rgba(210, 105, 30, 0.05);
+        }
+
+        .admin-section {
+            border-top: 2px solid var(--light-gray);
+            padding-top: 1.5rem;
+            margin-top: 2rem;
+        }
+
+        .alert {
+            padding: 1rem;
+            border-radius: var(--border-radius);
+            margin-bottom: 1rem;
+        }
+
+        .alert-error {
+            background: rgba(220, 20, 60, 0.1);
+            color: var(--error);
+            border: 1px solid var(--error);
+        }
+
+        .alert-success {
+            background: rgba(34, 139, 34, 0.1);
+            color: var(--success);
+            border: 1px solid var(--success);
+        }
+    </style>
+</body>
+</html>

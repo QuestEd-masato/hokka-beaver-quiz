@@ -1,0 +1,24 @@
+{
+  "name": "hokka-quiz-rally",
+  "version": "2.0.0",
+  "description": "hokkaクイズラリー - 金沢学院大学附属中学校２年１組用ビーバーおかきクイズアプリケーション",
+  "main": "enhanced_server.js",
+  "scripts": {
+    "start": "node enhanced_server.js",
+    "dev": "node enhanced_server.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": ["quiz", "beaver", "okaki", "festival", "education", "csv-export", "high-performance"],
+  "author": "金沢学院大学附属中学校２年１組",
+  "license": "MIT",
+  "dependencies": {},
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "performance": {
+    "maxConnections": 200,
+    "timeout": 30000,
+    "keepAlive": 65000,
+    "features": ["csv-export", "real-time-monitoring", "connection-management"]
+  }
+}

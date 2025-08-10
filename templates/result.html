@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🦫 hokkaクイズラリー - 結果発表</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <!-- ヘッダー -->
+    <header class="header">
+        <div class="container">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h1 style="display: flex; align-items: center;">
+                    <img src="/images/beaver-logo.png" alt="ビーバーロゴ" style="height: 50px; margin-right: 15px;">
+                    hokkaクイズラリー
+                </h1>
+                <button onclick="Auth.logout()" class="btn btn-secondary btn-small">ログアウト</button>
+            </div>
+        </div>
+    </header>
+
+    <!-- メインコンテンツ -->
+    <main class="main">
+        <div class="container">
+            <!-- 結果発表 -->
+            <div class="card text-center fade-in">
+                <div class="card-header">
+                    <div style="display: flex; align-items: center; justify-content: center; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap;">
+                        <img src="/images/beaver.png" alt="ビーバーキャラクター" style="height: 100px; animation: bounce 1s ease-in-out infinite;">
+                        <h2>🎉 クイズ完了！お疲れさまでした！</h2>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <!-- スコア表示 -->
+                    <div class="score-display" style="margin: 2rem 0;">
+                        <div class="final-score" style="font-size: 4rem; font-weight: 700; color: var(--primary); margin-bottom: 1rem;">
+                            <span id="final-score">0</span><span style="font-size: 2rem;">点</span>
+                        </div>
+                        <div class="correct-count" style="font-size: 1.5rem; color: var(--gray); margin-bottom: 2rem;">
+                            <span id="correct-count">0</span> / 10 問正解
+                        </div>
+                        
+                        <!-- 成績評価 -->
+                        <div id="grade-evaluation" class="grade-evaluation" style="padding: 1.5rem; border-radius: var(--border-radius); margin-bottom: 2rem;">
+                            <!-- JavaScriptで動的に設定 -->
+                        </div>
+                    </div>
+
+                    <!-- アクションボタン -->
+                    <div class="action-buttons">
+                        <a href="/mypage" class="btn btn-secondary btn-large">
+                            🏠 マイページ
+                        </a>
+                        <a href="/survey" class="btn btn-success btn-large">
+                            🎁 アンケートでボーナスGET
+                        </a>
+                        <a href="/ranking" class="btn btn-primary btn-large">
+                            🏆 ランキングを見る
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 詳細結果 -->
+            <div class="card slide-in" style="animation-delay: 0.3s;">
+                <div class="card-header">
+                    <h3>📊 詳細結果</h3>
+                </div>
+                <div class="card-body">
+                    <div id="detailed-results">
+                        <!-- 詳細結果がここに表示されます -->
+                        <div class="text-center" style="padding: 20px; color: var(--gray);">
+                            結果を読み込み中...
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 学習ポイント -->
+            <div class="card slide-in" style="animation-delay: 0.6s;">
+                <div class="card-header">
+                    <h3>💡 今回学んだこと</h3>
+                </div>
+                <div class="card-body">
+                    <div class="learning-points">
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem;">
+                            <div class="learning-item">
+                                <h4 style="color: var(--primary); margin-bottom: 0.5rem;">🦫 ビーバーについて</h4>
+                                <ul style="line-height: 1.8;">
+                                    <li>木をかじってダムを作る動物</li>
+                                    <li>前歯が一生伸び続ける</li>
+                                    <li>しゃもじのような平たい尻尾</li>
+                                </ul>
+                            </div>
+                            <div class="learning-item">
+                                <h4 style="color: var(--secondary); margin-bottom: 0.5rem;">🍘 おかきについて</h4>
+                                <ul style="line-height: 1.8;">
+                                    <li>もち米が主な原料</li>
+                                    <li>せんべいとは原料が違う</li>
+                                    <li>湿気を避けて保存が大切</li>
+                                </ul>
+                            </div>
+                            <div class="learning-item">
+                                <h4 style="color: var(--accent); margin-bottom: 0.5rem;">🗾 北陸地方について</h4>
+                                <ul style="line-height: 1.8;">
+                                    <li>石川県の県庁所在地は金沢市</li>
+                                    <li>「ほっか」は温かいという方言</li>
+                                    <li>豊かな食文化が根付いている</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 次のステップ -->
+            <div class="card slide-in text-center" style="animation-delay: 0.9s;">
+                <div class="card-body">
+                    <h3 style="margin-bottom: 1rem;">🚀 次は何をしますか？</h3>
+                    <p style="margin-bottom: 2rem; color: var(--gray);">
+                        クイズはこれで終了ですが、まだまだ楽しいことが待っています！
+                    </p>
+                    <div class="action-buttons" style="grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));">
+                        <div class="next-step-item" style="padding: 1.5rem; background: var(--light-gray); border-radius: var(--border-radius);">
+                            <h4 style="color: var(--secondary); margin-bottom: 1rem;">🏠 マイページ</h4>
+                            <p style="margin-bottom: 1rem;">個人成績や詳細な結果を確認しよう！</p>
+                            <a href="/mypage" class="btn btn-secondary">マイページを見る</a>
+                        </div>
+                        <div class="next-step-item" style="padding: 1.5rem; background: var(--light-gray); border-radius: var(--border-radius);">
+                            <h4 style="color: var(--success); margin-bottom: 1rem;">📝 アンケート</h4>
+                            <p style="margin-bottom: 1rem;">感想を教えてボーナスポイントをGET！</p>
+                            <a href="/survey" class="btn btn-success">アンケートに答える</a>
+                        </div>
+                        <div class="next-step-item" style="padding: 1.5rem; background: var(--light-gray); border-radius: var(--border-radius);">
+                            <h4 style="color: var(--primary); margin-bottom: 1rem;">🏆 ランキング</h4>
+                            <p style="margin-bottom: 1rem;">他の参加者と成績を比較してみよう！</p>
+                            <a href="/ranking" class="btn btn-primary">ランキングを見る</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- フッター -->
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2025 金沢学院大学附属中学校２年１組 - hokkaクイズラリー</p>
+        </div>
+    </footer>
+
+    <!-- JavaScript -->
+    <script src="/js/app.js"></script>
+
+    <!-- 結果ページ固有のスクリプト -->
+    <script>
+        // ページ読み込み時の初期化
+        document.addEventListener('DOMContentLoaded', async () => {
+            // 結果データを取得（通常はサーバーから、今回はローカルストレージから）
+            displayResults();
+            displayDetailedResults();
+        });
+
+        // 結果表示
+        function displayResults() {
+            // ローカルストレージから結果を取得（デモ用）
+            const quizResult = Utils.loadFromStorage('quizResult') || {
+                score: 70,
+                correctCount: 7,
+                totalQuestions: 10
+            };
+
+            // スコア表示
+            const finalScoreElement = Utils.$('#final-score');
+            const correctCountElement = Utils.$('#correct-count');
+            
+            if (finalScoreElement) {
+                finalScoreElement.textContent = quizResult.score;
+            }
+            
+            if (correctCountElement) {
+                correctCountElement.textContent = quizResult.correctCount;
+            }
+
+            // 成績評価表示
+            displayGradeEvaluation(quizResult.score, quizResult.correctCount);
+        }
+
+        // 成績評価表示
+        function displayGradeEvaluation(score, correctCount) {
+            const gradeElement = Utils.$('#grade-evaluation');
+            if (!gradeElement) return;
+
+            let grade, message, bgColor, textColor;
+
+            if (correctCount >= 9) {
+                grade = "🏆 ビーバー博士";
+                message = "素晴らしい！ビーバーとおかきのプロフェッショナルです！";
+                bgColor = "linear-gradient(135deg, #ffd700 0%, #ffed4e 100%)";
+                textColor = "#333";
+            } else if (correctCount >= 7) {
+                grade = "🥇 ビーバー上級者";
+                message = "すごい！ビーバーとおかきについてよく知っていますね！";
+                bgColor = "linear-gradient(135deg, #c0c0c0 0%, #e8e8e8 100%)";
+                textColor = "#333";
+            } else if (correctCount >= 5) {
+                grade = "🥉 ビーバー中級者";
+                message = "良い感じ！もう少し学べばビーバー博士になれそうです！";
+                bgColor = "linear-gradient(135deg, #cd7f32 0%, #daa520 100%)";
+                textColor = "#fff";
+            } else {
+                grade = "📚 ビーバー初心者";
+                message = "今回は練習！ビーバーとおかきについてもっと学んでみましょう！";
+                bgColor = "linear-gradient(135deg, var(--accent) 0%, var(--secondary) 100%)";
+                textColor = "#fff";
+            }
+
+            gradeElement.innerHTML = `
+                <div style="background: ${bgColor}; color: ${textColor}; padding: 1.5rem; border-radius: var(--border-radius);">
+                    <h3 style="font-size: 1.5rem; margin-bottom: 0.5rem;">${grade}</h3>
+                    <p style="margin: 0; font-size: 1.1rem;">${message}</p>
+                </div>
+            `;
+        }
+
+        // 詳細結果表示
+        function displayDetailedResults() {
+            const detailedContainer = Utils.$('#detailed-results');
+            if (!detailedContainer) return;
+
+            // サンプルデータ（実際はサーバーから取得）
+            const userAnswers = Utils.loadFromStorage('quizAnswers') || {};
+            const correctAnswers = ['B', 'C', 'C', 'A', 'C', 'B', 'A', 'A', 'B', 'D'];
+            
+            let detailedHtml = '<div style="display: grid; gap: 1rem;">';
+            
+            for (let i = 1; i <= 10; i++) {
+                const userAnswer = userAnswers[i] || '未回答';
+                const correctAnswer = correctAnswers[i - 1];
+                const isCorrect = userAnswer === correctAnswer;
+                const statusIcon = isCorrect ? '✅' : '❌';
+                const statusClass = isCorrect ? 'correct' : 'incorrect';
+                
+                detailedHtml += `
+                    <div class="result-item ${statusClass}" style="
+                        display: flex; 
+                        align-items: center; 
+                        padding: 1rem; 
+                        background: ${isCorrect ? 'rgba(34, 139, 34, 0.1)' : 'rgba(220, 20, 60, 0.1)'}; 
+                        border-radius: var(--border-radius);
+                        border-left: 4px solid ${isCorrect ? 'var(--success)' : 'var(--error)'};
+                    ">
+                        <div style="font-size: 1.5rem; margin-right: 1rem;">${statusIcon}</div>
+                        <div style="flex: 1;">
+                            <strong>問題 ${i}</strong><br>
+                            あなたの解答: <span style="font-weight: 600;">${userAnswer}</span> | 
+                            正解: <span style="font-weight: 600; color: var(--success);">${correctAnswer}</span>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            detailedHtml += '</div>';
+            detailedContainer.innerHTML = detailedHtml;
+        }
+    </script>
+</body>
+</html>

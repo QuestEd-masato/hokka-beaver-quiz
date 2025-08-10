@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🦫 hokkaクイズラリー - 新規登録</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <!-- ヘッダー -->
+    <header class="header">
+        <div class="container">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h1 style="display: flex; align-items: center;">
+                    <img src="/images/beaver-logo.png" alt="ビーバーロゴ" style="height: 50px; margin-right: 15px;">
+                    hokkaクイズラリー
+                </h1>
+                <div>
+                    <a href="/mypage" class="btn btn-secondary btn-small">📊 マイページ</a>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- メインコンテンツ -->
+    <main class="main">
+        <div class="container">
+            <!-- エラー・成功メッセージ -->
+            <div id="error-message" class="alert alert-error" style="display: none;"></div>
+            <div id="success-message" class="alert alert-success" style="display: none;"></div>
+
+            <!-- 新規登録フォーム -->
+            <div class="card fade-in">
+                <div class="card-header text-center">
+                    <div style="display: flex; align-items: center; justify-content: center; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap;">
+                        <img src="/images/beaver.png" alt="ビーバーキャラクター" style="height: 80px;">
+                        <h2>🆕 新規登録</h2>
+                    </div>
+                    <p style="color: var(--gray); margin-top: 0.5rem;">
+                        初めての方はこちらからアカウントを作成してください
+                    </p>
+                </div>
+                <div class="card-body">
+                    <form id="register-form">
+                        <div class="form-group">
+                            <label for="nickname" class="form-label">ニックネーム *</label>
+                            <input type="text" id="nickname" name="nickname" class="form-input" 
+                                   placeholder="例: クイズ太郎" required maxlength="20">
+                            <small style="color: var(--gray);">※個人情報は入力しないでください</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="age_group" class="form-label">年齢層 *</label>
+                            <select id="age_group" name="age_group" class="form-input form-select" required>
+                                <option value="">選択してください</option>
+                                <option value="preschool">ようちえん・ほいくえん</option>
+                                <option value="elementary">小学生</option>
+                                <option value="junior_high">中学生</option>
+                                <option value="high_school">高校生</option>
+                                <option value="adult">大人</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="gender" class="form-label">性別 *</label>
+                            <select id="gender" name="gender" class="form-input form-select" required>
+                                <option value="">選択してください</option>
+                                <option value="male">男性</option>
+                                <option value="female">女性</option>
+                                <option value="other">その他</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="password" class="form-label">パスワード *</label>
+                            <input type="password" id="password" name="password" class="form-input" 
+                                   placeholder="4文字以上で設定してください" required minlength="4">
+                        </div>
+
+                        <div class="text-center">
+                            <button type="submit" class="btn btn-primary btn-large">
+                                🚀 登録してマイページへ
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- ログインリンク -->
+            <div class="card slide-in text-center" style="animation-delay: 0.2s;">
+                <div class="card-body">
+                    <p>すでにアカウントをお持ちの方は</p>
+                    <a href="/" class="btn btn-secondary btn-large">🔑 ログインページへ</a>
+                </div>
+            </div>
+
+            <!-- 説明セクション -->
+            <div class="card slide-in mt-4" style="animation-delay: 0.4s;">
+                <div class="card-header">
+                    <h3>📖 クイズの進め方</h3>
+                </div>
+                <div class="card-body">
+                    <ol style="line-height: 2; font-size: var(--font-size-lg);">
+                        <li><strong>会場内を探索</strong>：各ポイントに設置された問題を探しましょう</li>
+                        <li><strong>問題を読む</strong>：紙に印刷された問題文をよく読んでください</li>
+                        <li><strong>アプリで解答</strong>：このアプリで該当する問題番号の解答を選択</li>
+                        <li><strong>自動保存</strong>：解答は自動的に保存されます</li>
+                        <li><strong>修正可能</strong>：いつでも解答を変更できます</li>
+                        <li><strong>全問完了</strong>：10問すべて解答したら採点結果を確認</li>
+                        <li><strong>アンケート</strong>：最後にアンケートでボーナスポイント獲得！</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- フッター -->
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2025 金沢学院大学附属中学校２年１組 - hokkaクイズラリー</p>
+            <p style="font-size: var(--font-size-sm); margin-top: 0.5rem;">
+                協力: 北陸製菓株式会社
+            </p>
+        </div>
+    </footer>
+
+    <!-- JavaScript -->
+    <script src="/js/app.js"></script>
+
+    <!-- 新規登録ページ固有のスクリプト -->
+    <script>
+        // ページ読み込み時の初期化
+        document.addEventListener('DOMContentLoaded', async () => {
+            // 既にログイン済みの場合はマイページにリダイレクト
+            if (Auth.isAuthenticated()) {
+                Utils.showSuccess('既にログイン済みです。マイページに移動します。');
+                setTimeout(() => {
+                    window.location.href = '/mypage';
+                }, 1500);
+                return;
+            }
+            
+            setupRegisterForm();
+        });
+
+        // 登録フォーム設定
+        function setupRegisterForm() {
+            const registerForm = Utils.$('#register-form');
+            if (registerForm) {
+                registerForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const formData = Utils.getFormData(registerForm);
+                    await Auth.register(formData);
+                });
+            }
+        }
+    </script>
+
+    <!-- 新規登録ページ用CSS -->
+    <style>
+        .alert {
+            padding: 1rem;
+            border-radius: var(--border-radius);
+            margin-bottom: 1rem;
+        }
+
+        .alert-error {
+            background: rgba(220, 20, 60, 0.1);
+            color: var(--error);
+            border: 1px solid var(--error);
+        }
+
+        .alert-success {
+            background: rgba(34, 139, 34, 0.1);
+            color: var(--success);
+            border: 1px solid var(--success);
+        }
+    </style>
+</body>
+</html>

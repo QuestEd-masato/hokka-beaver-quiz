@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🦫 hokkaクイズラリー - 解答確認</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <!-- ヘッダー -->
+    <header class="header">
+        <div class="container">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h1 style="display: flex; align-items: center;">
+                    <img src="/images/beaver-logo.png" alt="ビーバーロゴ" style="height: 50px; margin-right: 15px;">
+                    hokkaクイズラリー
+                </h1>
+                <button onclick="Auth.logout()" class="btn btn-secondary btn-small">ログアウト</button>
+            </div>
+        </div>
+    </header>
+
+    <!-- メインコンテンツ -->
+    <main class="main">
+        <div class="container">
+            <!-- エラー・成功メッセージ -->
+            <div id="error-message" class="alert alert-error" style="display: none;"></div>
+            <div id="success-message" class="alert alert-success" style="display: none;"></div>
+
+            <!-- ログイン要求 -->
+            <div id="login-required" class="card text-center fade-in">
+                <div class="card-header">
+                    <h2>🔐 ログインが必要です</h2>
+                </div>
+                <div class="card-body">
+                    <p>解答確認ページにアクセスするにはログインしてください。</p>
+                    <a href="/mypage" class="btn btn-primary">マイページへ</a>
+                </div>
+            </div>
+
+            <!-- 解答確認メイン -->
+            <div id="review-main" style="display: none;">
+                <!-- ページタイトル -->
+                <div class="card fade-in">
+                    <div class="card-header text-center">
+                        <h2>📝 解答確認</h2>
+                        <p style="color: var(--gray); margin-top: 0.5rem;">
+                            あなたの解答と正解、解説をまとめて確認できます
+                        </p>
+                    </div>
+                </div>
+
+                <!-- 成績サマリー -->
+                <div class="card slide-in" style="animation-delay: 0.2s;">
+                    <div class="card-header">
+                        <h3>🏆 成績サマリー</h3>
+                    </div>
+                    <div class="card-body">
+                        <div id="score-summary" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; text-align: center;">
+                            <div class="score-item">
+                                <div class="score-number" id="final-score">-</div>
+                                <div class="score-label">総合スコア</div>
+                            </div>
+                            <div class="score-item">
+                                <div class="score-number" id="correct-count">-</div>
+                                <div class="score-label">正解数</div>
+                            </div>
+                            <div class="score-item">
+                                <div class="score-number" id="accuracy-rate">-%</div>
+                                <div class="score-label">正答率</div>
+                            </div>
+                            <div class="score-item">
+                                <div class="score-number" id="current-rank">-位</div>
+                                <div class="score-label">現在の順位</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- フィルター -->
+                <div class="card slide-in" style="animation-delay: 0.4s;">
+                    <div class="card-body">
+                        <div style="display: flex; flex-wrap: wrap; gap: 1rem; justify-content: center;">
+                            <button class="btn btn-outline filter-btn active" data-filter="all">全て表示</button>
+                            <button class="btn btn-outline filter-btn" data-filter="correct">正解のみ</button>
+                            <button class="btn btn-outline filter-btn" data-filter="incorrect">不正解のみ</button>
+                            <button class="btn btn-outline filter-btn" data-filter="unanswered">未回答のみ</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 解答一覧 -->
+                <div id="answers-container">
+                    <!-- 解答詳細がここに表示されます -->
+                </div>
+
+                <!-- ナビゲーション -->
+                <div class="card slide-in text-center" style="animation-delay: 0.6s;">
+                    <div class="card-body">
+                        <div class="action-buttons">
+                            <a href="/mypage" class="btn btn-secondary">🏠 マイページに戻る</a>
+                            <a href="/ranking" class="btn btn-success">🏆 ランキングを見る</a>
+                            <a href="/survey" class="btn btn-warning">📝 アンケートに回答</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- フッター -->
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2025 金沢学院大学附属中学校２年１組 - hokkaクイズラリー</p>
+        </div>
+    </footer>
+
+    <!-- JavaScript -->
+    <script src="/js/app.js"></script>
+
+    <!-- 解答確認ページ固有のスクリプト -->
+    <script>
+        let questions = [];
+        let userAnswers = {};
+        let currentFilter = 'all';
+
+        // ページ読み込み時の初期化
+        document.addEventListener('DOMContentLoaded', async () => {
+            checkLogin();
+        });
+
+        // ログイン確認
+        function checkLogin() {
+            if (!Auth.isAuthenticated()) {
+                window.location.href = '/?redirect=' + encodeURIComponent(window.location.pathname);
+                return;
+            }
+
+            // ログイン済みの場合
+            document.getElementById('login-required').style.display = 'none';
+            document.getElementById('review-main').style.display = 'block';
+            
+            loadReviewData();
+        }
+
+        // 解答確認データ読み込み
+        async function loadReviewData() {
+            try {
+                // 問題データ読み込み
+                const questionsResult = await Utils.apiCall('/api/quiz/questions');
+                questions = questionsResult.questions;
+
+                // ユーザー解答読み込み
+                userAnswers = Utils.loadFromStorage('quizAnswers') || {};
+
+                // ランキングデータ読み込み
+                const rankingResult = await Utils.apiCall('/api/ranking');
+                const rankings = rankingResult.rankings || [];
+                const userRank = rankings.findIndex(r => r.nickname === AppState.currentUser.nickname) + 1;
+
+                // 成績サマリー表示
+                displayScoreSummary(userRank, rankings.length);
+
+                // 解答詳細表示
+                displayAnswerDetails();
+
+                // フィルターイベント設定
+                setupFilterEvents();
+
+            } catch (error) {
+                console.error('解答確認データ読み込みエラー:', error);
+                Utils.showError('データの読み込みに失敗しました。');
+            }
+        }
+
+        // 成績サマリー表示
+        function displayScoreSummary(userRank, totalUsers) {
+            const totalQuestions = questions.length;
+            const answeredCount = Object.keys(userAnswers).length;
+            let correctCount = 0;
+
+            // 正解数計算
+            Object.entries(userAnswers).forEach(([questionNum, answer]) => {
+                const question = questions.find(q => q.question_number === parseInt(questionNum));
+                if (question && answer === question.correct_answer) {
+                    correctCount++;
+                }
+            });
+
+            const score = correctCount * 10;
+            const accuracy = answeredCount > 0 ? Math.round((correctCount / totalQuestions) * 100) : 0;
+
+            Utils.$('#final-score').textContent = `${score}点`;
+            Utils.$('#correct-count').textContent = `${correctCount}/${totalQuestions}問`;
+            Utils.$('#accuracy-rate').textContent = `${accuracy}%`;
+            Utils.$('#current-rank').textContent = userRank > 0 ? `${userRank}位` : '未ランクイン';
+        }
+
+        // 解答詳細表示
+        function displayAnswerDetails() {
+            const container = Utils.$('#answers-container');
+            
+            const answersHtml = questions.map((question, index) => {
+                const userAnswer = userAnswers[question.question_number];
+                const isAnswered = userAnswer !== undefined;
+                const isCorrect = isAnswered ? userAnswer === question.correct_answer : false;
+                const status = !isAnswered ? 'unanswered' : (isCorrect ? 'correct' : 'incorrect');
+
+                return `
+                    <div class="answer-detail-card slide-in answer-${status}" style="animation-delay: ${index * 0.1}s;" data-status="${status}">
+                        <div class="answer-header">
+                            <div class="question-info">
+                                <span class="question-number">問題 ${question.question_number}</span>
+                                <span class="answer-status ${status}">
+                                    ${!isAnswered ? '未回答' : (isCorrect ? '✅ 正解' : '❌ 不正解')}
+                                </span>
+                            </div>
+                            ${isAnswered ? `<div class="answer-score">${isCorrect ? '+10点' : '0点'}</div>` : ''}
+                        </div>
+                        
+                        <div class="question-content">
+                            <div class="question-text">${question.question_text}</div>
+                            
+                            <div class="choices-review">
+                                ${['A', 'B', 'C', 'D'].map(choice => {
+                                    let choiceClass = '';
+                                    if (choice === question.correct_answer) {
+                                        choiceClass = 'correct-choice';
+                                    } else if (choice === userAnswer && choice !== question.correct_answer) {
+                                        choiceClass = 'user-wrong-choice';
+                                    } else if (choice === userAnswer) {
+                                        choiceClass = 'user-correct-choice';
+                                    }
+                                    
+                                    return `
+                                        <div class="choice-review ${choiceClass}">
+                                            <span class="choice-label">${choice}.</span>
+                                            <span class="choice-text">${question[`choice_${choice.toLowerCase()}`]}</span>
+                                            ${choice === userAnswer ? '<span class="choice-indicator">あなたの解答</span>' : ''}
+                                            ${choice === question.correct_answer ? '<span class="choice-indicator correct">正解</span>' : ''}
+                                        </div>
+                                    `;
+                                }).join('')}
+                            </div>
+                            
+                            ${question.explanation ? `
+                                <div class="explanation-section">
+                                    <div class="explanation-header">💡 解説</div>
+                                    <div class="explanation-content">${question.explanation}</div>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            container.innerHTML = answersHtml;
+        }
+
+        // フィルターイベント設定
+        function setupFilterEvents() {
+            const filterBtns = Utils.$$('.filter-btn');
+            filterBtns.forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    // アクティブ状態更新
+                    filterBtns.forEach(b => b.classList.remove('active'));
+                    e.target.classList.add('active');
+                    
+                    // フィルター適用
+                    currentFilter = e.target.dataset.filter;
+                    applyFilter();
+                });
+            });
+        }
+
+        // フィルター適用
+        function applyFilter() {
+            const cards = Utils.$$('.answer-detail-card');
+            cards.forEach(card => {
+                const status = card.dataset.status;
+                if (currentFilter === 'all' || currentFilter === status) {
+                    card.style.display = 'block';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        }
+    </script>
+
+    <!-- 解答確認ページ用CSS -->
+    <style>
+        .score-item {
+            background: var(--light-gray);
+            padding: 1.5rem 1rem;
+            border-radius: var(--border-radius);
+            border: 1px solid var(--border-color);
+        }
+
+        .score-number {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .score-label {
+            font-size: var(--font-size-sm);
+            color: var(--gray);
+        }
+
+        .filter-btn {
+            transition: all 0.3s ease;
+        }
+
+        .filter-btn.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        .answer-detail-card {
+            background: white;
+            border-radius: var(--border-radius);
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            border: 1px solid var(--border-color);
+            box-shadow: var(--shadow);
+        }
+
+        .answer-detail-card.answer-correct {
+            border-left: 4px solid var(--success);
+        }
+
+        .answer-detail-card.answer-incorrect {
+            border-left: 4px solid var(--error);
+        }
+
+        .answer-detail-card.answer-unanswered {
+            border-left: 4px solid var(--gray);
+            opacity: 0.8;
+        }
+
+        .answer-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--light-gray);
+        }
+
+        .question-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .question-number {
+            font-size: var(--font-size-lg);
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        .answer-status {
+            padding: 0.25rem 0.75rem;
+            border-radius: 15px;
+            font-size: var(--font-size-sm);
+            font-weight: 600;
+        }
+
+        .answer-status.correct {
+            background: rgba(34, 139, 34, 0.1);
+            color: var(--success);
+            border: 1px solid var(--success);
+        }
+
+        .answer-status.incorrect {
+            background: rgba(220, 20, 60, 0.1);
+            color: var(--error);
+            border: 1px solid var(--error);
+        }
+
+        .answer-status.unanswered {
+            background: rgba(128, 128, 128, 0.1);
+            color: var(--gray);
+            border: 1px solid var(--gray);
+        }
+
+        .answer-score {
+            font-size: var(--font-size-lg);
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .question-text {
+            font-size: var(--font-size-lg);
+            font-weight: 600;
+            color: var(--dark);
+            margin-bottom: 1rem;
+            line-height: 1.6;
+        }
+
+        .choices-review {
+            margin-bottom: 1.5rem;
+        }
+
+        .choice-review {
+            display: flex;
+            align-items: center;
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+            border-radius: var(--border-radius);
+            border: 1px solid var(--light-gray);
+            position: relative;
+        }
+
+        .choice-review.correct-choice {
+            background: rgba(34, 139, 34, 0.1);
+            border-color: var(--success);
+        }
+
+        .choice-review.user-wrong-choice {
+            background: rgba(220, 20, 60, 0.1);
+            border-color: var(--error);
+        }
+
+        .choice-review.user-correct-choice {
+            background: rgba(34, 139, 34, 0.15);
+            border-color: var(--success);
+            border-width: 2px;
+        }
+
+        .choice-label {
+            font-weight: 600;
+            margin-right: 0.75rem;
+            color: var(--primary);
+        }
+
+        .choice-text {
+            flex: 1;
+        }
+
+        .choice-indicator {
+            font-size: var(--font-size-sm);
+            padding: 0.25rem 0.5rem;
+            border-radius: 10px;
+            font-weight: 600;
+            margin-left: 0.5rem;
+        }
+
+        .choice-indicator:not(.correct) {
+            background: var(--primary);
+            color: white;
+        }
+
+        .choice-indicator.correct {
+            background: var(--success);
+            color: white;
+        }
+
+        .explanation-section {
+            background: rgba(210, 105, 30, 0.05);
+            border: 1px solid rgba(210, 105, 30, 0.2);
+            border-radius: var(--border-radius);
+            padding: 1rem;
+            margin-top: 1rem;
+        }
+
+        .explanation-header {
+            font-weight: 600;
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+            font-size: var(--font-size-lg);
+        }
+
+        .explanation-content {
+            color: var(--dark);
+            line-height: 1.6;
+        }
+
+        @media (max-width: 768px) {
+            .answer-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.5rem;
+            }
+
+            .question-info {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.5rem;
+            }
+        }
+    </style>
+</body>
+</html>

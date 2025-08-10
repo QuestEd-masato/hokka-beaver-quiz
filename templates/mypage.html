@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🦫 hokkaクイズラリー - マイページ</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <!-- ヘッダー -->
+    <header class="header">
+        <div class="container">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h1 style="display: flex; align-items: center;">
+                    <img src="/images/beaver-logo.png" alt="ビーバーロゴ" style="height: 50px; margin-right: 15px;">
+                    hokkaクイズラリー
+                </h1>
+                <div>
+                    <button id="admin-nav-btn" onclick="window.location.href='/admin'" class="btn btn-outline btn-small" style="margin-right: 0.5rem; display: none;">⚙️ 管理画面</button>
+                    <button onclick="Auth.logout()" class="btn btn-secondary btn-small">ログアウト</button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- メインコンテンツ -->
+    <main class="main">
+        <div class="container">
+            <!-- ログイン要求 -->
+            <div id="login-required" class="card text-center fade-in">
+                <div class="card-header">
+                    <div style="display: flex; align-items: center; justify-content: center; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap;">
+                        <img src="/images/beaver.png" alt="ビーバーキャラクター" style="height: 80px;">
+                        <h2>🔐 ログインが必要です</h2>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <p>マイページにアクセスするにはログインしてください。</p>
+                    <a href="/" class="btn btn-primary">ログインページへ</a>
+                </div>
+            </div>
+
+            <!-- マイページメイン -->
+            <div id="mypage-main" style="display: none;">
+                <!-- ユーザー情報 -->
+                <div class="card fade-in">
+                    <div class="card-header">
+                        <h2>👤 ようこそ、<span id="user-nickname">ゲスト</span>さん！</h2>
+                    </div>
+                    <div class="card-body">
+                        <div class="user-info-compact" style="display: flex; flex-wrap: wrap; gap: 1rem; justify-content: center; align-items: center; margin-bottom: 1rem;">
+                            <span class="user-info-badge"><span class="label">年齢:</span> <span id="user-age-group">-</span></span>
+                            <span class="user-info-badge"><span class="label">性別:</span> <span id="user-gender">-</span></span>
+                            <span class="user-info-badge"><span class="label">登録:</span> <span id="user-created">-</span></span>
+                            <span class="user-info-badge" id="user-type-badge"><span class="label">種別:</span> <span id="user-type">一般ユーザー</span></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- クイズ進捗状況 -->
+                <div class="card slide-in" style="animation-delay: 0.2s;">
+                    <div class="card-header">
+                        <h3>📝 クイズ進捗状況</h3>
+                    </div>
+                    <div class="card-body">
+                        <div id="quiz-progress">
+                            <!-- 進捗情報がここに表示されます -->
+                            <div class="text-center" style="padding: 2rem; color: var(--gray);">
+                                <div class="loading" style="margin: 20px auto;"></div>
+                                <p>進捗を読み込み中...</p>
+                            </div>
+                        </div>
+                        <div class="text-center mt-3">
+                            <a href="/quiz" class="btn btn-primary btn-large">
+                                📝 クイズに挑戦
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 現在の順位 -->
+                <div class="card slide-in" style="animation-delay: 0.4s;">
+                    <div class="card-header">
+                        <h3>🏆 あなたの順位</h3>
+                    </div>
+                    <div class="card-body">
+                        <div id="user-ranking" class="text-center">
+                            <div class="current-rank" style="font-size: 3rem; font-weight: 700; color: var(--primary); margin-bottom: 1rem;">
+                                <span id="user-rank">-</span><span style="font-size: 1.5rem;">位</span>
+                            </div>
+                            <div class="rank-details" style="color: var(--gray); margin-bottom: 2rem;">
+                                <div id="user-score-info">スコア情報を読み込み中...</div>
+                            </div>
+                            <div id="rank-badge" class="rank-badge" style="display: inline-block; padding: 1rem 2rem; border-radius: var(--border-radius); font-weight: 600;">
+                                <!-- ランクバッジがここに表示されます -->
+                            </div>
+                        </div>
+                        <div class="text-center mt-3">
+                            <a href="/ranking" class="btn btn-secondary">
+                                📊 全体ランキングを見る
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- アクションメニュー（管理者以外） -->
+                <div class="card slide-in" id="user-menu" style="animation-delay: 0.6s;">
+                    <div class="card-header">
+                        <h3>🎯 メニュー</h3>
+                    </div>
+                    <div class="card-body">
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem;">
+                            <div class="menu-item">
+                                <div class="menu-icon">📝</div>
+                                <div class="menu-content">
+                                    <h4>クイズに挑戦</h4>
+                                    <p>10問のビーバー・おかきクイズに挑戦しよう！</p>
+                                    <a href="/quiz" class="btn btn-primary btn-small">挑戦する</a>
+                                </div>
+                            </div>
+                            <div class="menu-item">
+                                <div class="menu-icon">📋</div>
+                                <div class="menu-content">
+                                    <h4>解答確認</h4>
+                                    <p>あなたの解答と正解、解説をまとめて確認</p>
+                                    <a href="/review" class="btn btn-info btn-small">確認する</a>
+                                </div>
+                            </div>
+                            <div class="menu-item">
+                                <div class="menu-icon">🎁</div>
+                                <div class="menu-content">
+                                    <h4>アンケート</h4>
+                                    <p>アンケートに回答してボーナスポイントをGET！</p>
+                                    <a href="/survey" class="btn btn-success btn-small">回答する</a>
+                                </div>
+                            </div>
+                            <div class="menu-item">
+                                <div class="menu-icon">🏆</div>
+                                <div class="menu-content">
+                                    <h4>ランキング</h4>
+                                    <p>他の参加者との成績を比較してみよう！</p>
+                                    <a href="/ranking" class="btn btn-secondary btn-small">見る</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 管理者専用メニュー -->
+                <div class="card slide-in" id="admin-menu" style="animation-delay: 0.6s; display: none;">
+                    <div class="card-header">
+                        <h3>⚙️ 管理者メニュー</h3>
+                    </div>
+                    <div class="card-body">
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem;">
+                            <div class="menu-item">
+                                <div class="menu-icon">⚙️</div>
+                                <div class="menu-content">
+                                    <h4>管理画面</h4>
+                                    <p>問題編集・ユーザー管理・データ出力</p>
+                                    <a href="/admin" class="btn btn-primary btn-small">管理画面へ</a>
+                                </div>
+                            </div>
+                            <div class="menu-item">
+                                <div class="menu-icon">🧪</div>
+                                <div class="menu-content">
+                                    <h4>クイズテスト</h4>
+                                    <p>問題の動作確認用（ランキング対象外）</p>
+                                    <a href="/quiz" class="btn btn-outline btn-small">テスト実行</a>
+                                </div>
+                            </div>
+                            <div class="menu-item">
+                                <div class="menu-icon">📊</div>
+                                <div class="menu-content">
+                                    <h4>参加者統計</h4>
+                                    <p>全参加者の成績を確認</p>
+                                    <a href="/ranking" class="btn btn-secondary btn-small">統計を見る</a>
+                                </div>
+                            </div>
+                            <div class="menu-item">
+                                <div class="menu-icon">📥</div>
+                                <div class="menu-content">
+                                    <h4>データ出力</h4>
+                                    <p>成績データをCSV形式で出力</p>
+                                    <a href="/api/admin/export/scores" class="btn btn-success btn-small">ダウンロード</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="margin-top: 1rem; padding: 1rem; background: rgba(255, 165, 0, 0.1); border-radius: var(--border-radius);">
+                            <small style="color: var(--gray);">
+                                💡 管理者のクイズ解答はテスト用です。ランキングには反映されません。
+                            </small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- アンケート状況 -->
+                <div class="card slide-in" style="animation-delay: 0.8s;">
+                    <div class="card-header">
+                        <h3>📋 アンケート状況</h3>
+                    </div>
+                    <div class="card-body">
+                        <div id="survey-status">
+                            <div class="text-center" style="padding: 1rem;">
+                                <div id="survey-message">アンケート状況を確認中...</div>
+                                <div class="mt-2">
+                                    <a href="/survey" class="btn btn-success" id="survey-action-btn">
+                                        📝 アンケートに回答
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- フッター -->
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2025 金沢学院大学附属中学校２年１組 - hokkaクイズラリー</p>
+        </div>
+    </footer>
+
+    <!-- JavaScript -->
+    <script src="/js/app.js"></script>
+
+    <!-- マイページ固有のスクリプト -->
+    <script>
+        // ページ読み込み時の初期化
+        document.addEventListener('DOMContentLoaded', async () => {
+            checkLogin();
+        });
+
+        // ログイン確認（シンプル化）
+        function checkLogin() {
+            if (!Auth.isAuthenticated()) {
+                // 未認証の場合はトップページへリダイレクト（リロード時に直接アクセス可能）
+                window.location.href = '/?redirect=' + encodeURIComponent(window.location.pathname);
+                return;
+            }
+
+            // ログイン済みの場合は通常通り表示
+            document.getElementById('login-required').style.display = 'none';
+            document.getElementById('mypage-main').style.display = 'block';
+            
+            loadUserData();
+        }
+
+        // ユーザーデータ読み込み
+        async function loadUserData() {
+            const user = AppState.currentUser;
+            if (!user) return;
+
+            // ユーザー情報表示
+            Utils.$('#user-nickname').textContent = user.nickname;
+            Utils.$('#user-age-group').textContent = getAgeGroupText(user.age_group);
+            Utils.$('#user-gender').textContent = getGenderText(user.gender);
+            Utils.$('#user-created').textContent = formatDate(user.created_at);
+            Utils.$('#user-type').textContent = user.is_admin ? '管理者' : '一般ユーザー';
+
+            // アドミンの場合はヘッダーの管理画面ボタンを表示
+            if (user.is_admin) {
+                Utils.$('#user-type-badge').classList.add('admin');
+                // ヘッダーの管理画面ボタンを表示
+                Utils.$('#admin-nav-btn').style.display = 'inline-block';
+                // 管理者専用メニューを表示、通常メニューを非表示
+                Utils.$('#admin-menu').style.display = 'block';
+                Utils.$('#user-menu').style.display = 'none';
+            }
+
+            // データ読み込み
+            await Promise.all([
+                loadQuizProgress(),
+                loadUserRanking(),
+                loadSurveyStatus()
+            ]);
+        }
+
+        // クイズ進捗読み込み
+        async function loadQuizProgress() {
+            try {
+                // クイズ完了状態をサーバーから取得
+                const statusResult = await Utils.apiCall(`/api/quiz/status/${AppState.currentUser.id}`);
+                const isCompleted = statusResult.isCompleted;
+                
+                // ローカルストレージから解答状況を取得
+                const answers = Utils.loadFromStorage('quizAnswers') || {};
+                const answeredCount = Object.keys(answers).length;
+                const totalQuestions = 10;
+                const progress = (answeredCount / totalQuestions) * 100;
+
+                const progressHtml = `
+                    <div style="margin-bottom: 2rem;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                            <span>解答済み問題</span>
+                            <span>${answeredCount} / ${totalQuestions}</span>
+                        </div>
+                        <div class="progress-container">
+                            <div class="progress-bar" style="width: ${progress}%;"></div>
+                        </div>
+                    </div>
+                    
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem;">
+                        <div class="progress-stat">
+                            <div class="stat-number">${answeredCount}</div>
+                            <div class="stat-label">解答済み</div>
+                        </div>
+                        <div class="progress-stat">
+                            <div class="stat-number">${totalQuestions - answeredCount}</div>
+                            <div class="stat-label">残り問題</div>
+                        </div>
+                        <div class="progress-stat">
+                            <div class="stat-number">${Math.round(progress)}%</div>
+                            <div class="stat-label">進捗率</div>
+                        </div>
+                    </div>
+                `;
+
+                Utils.$('#quiz-progress').innerHTML = progressHtml;
+
+                // クイズボタンの状態制御（完了後は完全無効化）
+                const quizButtons = document.querySelectorAll('a[href="/quiz"]');
+                const reviewButton = document.querySelector('a[href="/review"]');
+                
+                quizButtons.forEach(button => {
+                    if (isCompleted) {
+                        // 完了済みの場合はボタンを無効化
+                        button.style.pointerEvents = 'none';
+                        button.style.opacity = '0.5';
+                        button.style.cursor = 'not-allowed';
+                        button.innerHTML = '✅ クイズ完了済み';
+                        button.classList.remove('btn-primary');
+                        button.classList.add('btn-secondary');
+                        // href属性も無効化（念のため）
+                        button.removeAttribute('href');
+                        button.onclick = (e) => {
+                            e.preventDefault();
+                            Utils.showInfo('クイズは既に完了しています。結果は「解答確認」から確認できます。');
+                            return false;
+                        };
+                    } else {
+                        // 未完了の場合は通常表示
+                        button.style.pointerEvents = 'auto';
+                        button.style.opacity = '1';
+                        button.style.cursor = 'pointer';
+                        button.setAttribute('href', '/quiz');
+                        if (button.textContent.includes('挑戦する')) {
+                            button.innerHTML = '挑戦する';
+                        } else {
+                            button.innerHTML = '📝 クイズに挑戦';
+                        }
+                        button.classList.remove('btn-secondary');
+                        button.classList.add('btn-primary');
+                    }
+                });
+                
+                // 解答確認ボタンの制御
+                if (reviewButton) {
+                    if (!isCompleted) {
+                        reviewButton.style.pointerEvents = 'none';
+                        reviewButton.style.opacity = '0.5';
+                        reviewButton.style.cursor = 'not-allowed';
+                        reviewButton.innerHTML = '🔒 クイズ完了後に確認可能';
+                    } else {
+                        reviewButton.style.pointerEvents = 'auto';
+                        reviewButton.style.opacity = '1';
+                        reviewButton.style.cursor = 'pointer';
+                        reviewButton.innerHTML = '確認する';
+                    }
+                }
+
+            } catch (error) {
+                console.error('クイズ進捗読み込みエラー:', error);
+                Utils.$('#quiz-progress').innerHTML = '<p style="color: var(--error);">進捗の読み込みに失敗しました</p>';
+            }
+        }
+
+        // ユーザーランキング読み込み
+        async function loadUserRanking() {
+            try {
+                const result = await Utils.apiCall('/api/ranking');
+                const rankings = result.rankings || [];
+                
+                const userRanking = rankings.find(r => r.nickname === AppState.currentUser.nickname);
+                const userRank = rankings.findIndex(r => r.nickname === AppState.currentUser.nickname) + 1;
+
+                if (userRanking && userRank > 0) {
+                    Utils.$('#user-rank').textContent = userRank;
+                    Utils.$('#user-score-info').innerHTML = `
+                        <div>スコア: ${userRanking.final_score}点</div>
+                        <div>正解数: ${userRanking.correct_answers} / ${userRanking.total_questions}</div>
+                        <div>全${rankings.length}人中 ${userRank}位</div>
+                    `;
+
+                    // ランクバッジ
+                    const badge = getRankBadge(userRank, userRanking.final_score);
+                    const badgeElement = Utils.$('#rank-badge');
+                    badgeElement.style.background = badge.color;
+                    badgeElement.style.color = badge.textColor;
+                    badgeElement.textContent = badge.text;
+
+                } else {
+                    Utils.$('#user-rank').textContent = '-';
+                    Utils.$('#user-score-info').innerHTML = `
+                        <div style="color: var(--gray);">
+                            まだクイズに挑戦していません<br>
+                            クイズを完了するとランキングに参加できます
+                        </div>
+                    `;
+                    Utils.$('#rank-badge').style.display = 'none';
+                }
+
+            } catch (error) {
+                console.error('ランキング読み込みエラー:', error);
+                Utils.$('#user-score-info').innerHTML = '<p style="color: var(--error);">ランキングの読み込みに失敗しました</p>';
+            }
+        }
+
+        // アンケート状況読み込み（サーバー側と同期）
+        async function loadSurveyStatus() {
+            try {
+                // サーバーから実際の状態を取得
+                const statusResult = await Utils.apiCall(`/api/quiz/status/${AppState.currentUser.id}`);
+                const isQuizCompleted = statusResult.isCompleted;
+                
+                // サーバーからアンケート状態も取得（実装する）
+                const surveyResult = await Utils.apiCall(`/api/survey/status/${AppState.currentUser.id}`);
+                const isSurveyCompleted = surveyResult.completed;
+                
+                const messageElement = Utils.$('#survey-message');
+                const actionButton = Utils.$('#survey-action-btn');
+                const allSurveyButtons = document.querySelectorAll('a[href="/survey"]');
+
+                if (isSurveyCompleted) {
+                    // アンケート回答済みの場合
+                    messageElement.innerHTML = `
+                        <div style="color: var(--success);">
+                            ✅ アンケート回答済み<br>
+                            ボーナスポイントを獲得しました！
+                        </div>
+                    `;
+                    
+                    // すべてのアンケートボタンを無効化
+                    allSurveyButtons.forEach(button => {
+                        button.style.pointerEvents = 'none';
+                        button.style.opacity = '0.5';
+                        button.style.cursor = 'not-allowed';
+                        button.innerHTML = '✅ アンケート回答済み';
+                        button.classList.remove('btn-success');
+                        button.classList.add('btn-secondary');
+                    });
+                    
+                } else if (!isQuizCompleted) {
+                    // クイズ未完了の場合
+                    messageElement.innerHTML = `
+                        <div style="color: var(--info);">
+                            📝 クイズ完了後にアンケートが可能になります
+                        </div>
+                    `;
+                    
+                    // アンケートボタンを一時的に無効化
+                    allSurveyButtons.forEach(button => {
+                        button.style.pointerEvents = 'none';
+                        button.style.opacity = '0.5';
+                        button.style.cursor = 'not-allowed';
+                        button.innerHTML = '🔒 クイズ完了後に解放';
+                        button.classList.remove('btn-success');
+                        button.classList.add('btn-secondary');
+                    });
+                    
+                } else {
+                    // クイズ完了・アンケート未回答の場合
+                    messageElement.innerHTML = `
+                        <div style="color: var(--warning);">
+                            📝 アンケート未回答<br>
+                            回答してボーナスポイントを獲得しよう！
+                        </div>
+                    `;
+                    
+                    // アンケートボタンを有効化
+                    allSurveyButtons.forEach(button => {
+                        button.style.pointerEvents = 'auto';
+                        button.style.opacity = '1';
+                        button.style.cursor = 'pointer';
+                        if (button.textContent.includes('回答する')) {
+                            button.innerHTML = '回答する';
+                        } else {
+                            button.innerHTML = '📋 アンケートに回答';
+                        }
+                        button.classList.remove('btn-secondary');
+                        button.classList.add('btn-success');
+                    });
+                }
+                
+            } catch (error) {
+                console.error('アンケート状況読み込みエラー:', error);
+                const messageElement = Utils.$('#survey-message');
+                messageElement.innerHTML = `
+                    <div style="color: var(--error);">
+                        アンケート状況の読み込みに失敗しました
+                    </div>
+                `;
+            }
+        }
+
+        // ヘルパー関数
+        function getAgeGroupText(ageGroup) {
+            const ageGroups = {
+                'preschool': 'ようちえん・ほいくえん',
+                'elementary': '小学生',
+                'junior_high': '中学生',
+                'high_school': '高校生',
+                'adult': '大人'
+            };
+            return ageGroups[ageGroup] || '不明';
+        }
+
+        function getGenderText(gender) {
+            const genders = {
+                'male': '男性',
+                'female': '女性',
+                'other': 'その他'
+            };
+            return genders[gender] || '不明';
+        }
+
+        function formatDate(dateString) {
+            if (!dateString) return '不明';
+            const date = new Date(dateString);
+            return date.toLocaleDateString('ja-JP');
+        }
+
+        function getRankBadge(rank, score) {
+            if (rank === 1) {
+                return { text: '🥇 チャンピオン', color: 'linear-gradient(135deg, #ffd700 0%, #ffed4e 100%)', textColor: '#333' };
+            } else if (rank <= 3) {
+                return { text: '🏆 上位入賞', color: 'linear-gradient(135deg, #c0c0c0 0%, #e8e8e8 100%)', textColor: '#333' };
+            } else if (rank <= 10) {
+                return { text: '🎖️ 優秀', color: 'linear-gradient(135deg, var(--success) 0%, var(--secondary) 100%)', textColor: '#fff' };
+            } else {
+                return { text: '🎯 参加者', color: 'linear-gradient(135deg, var(--accent) 0%, var(--gray) 100%)', textColor: '#fff' };
+            }
+        }
+    </script>
+
+    <!-- マイページ用追加CSS -->
+    <style>
+        .user-info-badge {
+            display: inline-flex;
+            align-items: center;
+            background: var(--light-gray);
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: var(--font-size-sm);
+            border: 1px solid var(--border-color);
+        }
+
+        .user-info-badge .label {
+            color: var(--gray);
+            margin-right: 0.5rem;
+            font-weight: 500;
+        }
+
+        .user-info-badge span:last-child {
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        #user-type-badge.admin {
+            background: linear-gradient(135deg, var(--warning) 0%, #ffeb99 100%);
+            border-color: var(--warning);
+        }
+
+        #user-type-badge.admin .label,
+        #user-type-badge.admin span:last-child {
+            color: #333;
+        }
+
+        .progress-stat {
+            text-align: center;
+            background: var(--light-gray);
+            padding: 1rem;
+            border-radius: var(--border-radius);
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .stat-label {
+            font-size: var(--font-size-sm);
+            color: var(--gray);
+        }
+
+        .current-rank {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .menu-item {
+            display: flex;
+            align-items: center;
+            background: var(--light-gray);
+            padding: 1.5rem;
+            border-radius: var(--border-radius);
+            transition: all 0.3s ease;
+        }
+
+        .menu-item:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow);
+        }
+
+        .menu-icon {
+            font-size: 3rem;
+            margin-right: 1rem;
+        }
+
+        .menu-content h4 {
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .menu-content p {
+            color: var(--gray);
+            margin-bottom: 1rem;
+            font-size: var(--font-size-sm);
+        }
+
+        @media (max-width: 768px) {
+            .menu-item {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .menu-icon {
+                margin-right: 0;
+                margin-bottom: 1rem;
+            }
+        }
+    </style>
+</body>
+</html>
