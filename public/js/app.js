@@ -128,6 +128,9 @@ const Utils = {
 const Auth = {
   // ログイン（シンプル化）
   async login(credentials) {
+    // 完全なログイン状態リセット（混乱防止）
+    this.clearAuthData();
+    
     try {
       const result = await Utils.apiCall('/api/auth/login', {
         method: 'POST',
@@ -148,25 +151,34 @@ const Auth = {
     }
   },
   
-  // ログアウト（シンプル化）
-  logout() {
-    AppState.currentUser = null;
+  // 完全なデータクリア（認証混乱防止）
+  clearAuthData() {
     Utils.removeFromStorage('currentUser');
     Utils.removeFromStorage('auth_token');
+    Utils.removeFromStorage('quizAnswers');
+    Utils.removeFromStorage('quizResult');
+    AppState.currentUser = null;
+  },
+  
+  // ログアウト（完全化）
+  logout() {
+    this.clearAuthData();
     window.location.href = '/';
   },
   
-  // 認証状態確認（シンプル化）
+  // 認証状態確認（整合性チェック強化）
   isAuthenticated() {
     const savedUser = Utils.loadFromStorage('currentUser');
     const authToken = Utils.loadFromStorage('auth_token');
     
-    if (savedUser && authToken) {
+    if (savedUser && authToken && savedUser.id) {
       AppState.currentUser = savedUser;
       return true;
+    } else {
+      // 不整合データのクリア
+      this.clearAuthData();
+      return false;
     }
-    
-    return false;
   },
   
   // 現在のユーザー取得（シンプル化）
@@ -187,7 +199,21 @@ const Quiz = {
     try {
       const result = await Utils.apiCall('/api/quiz/questions');
       // サーバーは配列を直接返すので、result.questionsではなくresultを使用
-      this.questions = Array.isArray(result) ? result : (result.questions || []);
+      let questions = Array.isArray(result) ? result : (result.questions || []);
+      
+      // 重複問題の除去（question_numberが同じ場合、IDが小さい方を採用）
+      const questionMap = new Map();
+      questions.forEach(q => {
+        const existing = questionMap.get(q.question_number);
+        if (!existing || q.id < existing.id) {
+          questionMap.set(q.question_number, q);
+        }
+      });
+      
+      // 問題番号順にソート
+      this.questions = Array.from(questionMap.values()).sort((a, b) => a.question_number - b.question_number);
+      
+      console.log(`✅ 問題データ読み込み完了: ${this.questions.length}問`);
       return this.questions;
     } catch (error) {
       console.error('問題読み込みエラー:', error);
@@ -226,8 +252,20 @@ const Quiz = {
   
   // 問題表示（問題文なし、解答欄のみ）
   displayQuestion(questionNumber) {
+    console.log(`🔍 displayQuestion called: questionNumber=${questionNumber}, totalQuestions=${this.questions.length}`);
+    console.log('Available questions:', this.questions.map(q => `Q${q.question_number}(ID:${q.id})`));
+    
     const question = this.questions.find(q => q.question_number === questionNumber);
-    if (!question) return;
+    if (!question) {
+      console.error(`❌ Question ${questionNumber} not found!`);
+      const questionContainer = Utils.$('#question-container');
+      if (questionContainer) {
+        questionContainer.innerHTML = `<p style="text-align: center; color: var(--error);">問題${questionNumber}が見つかりません。ページを再読み込みしてください。</p>`;
+      }
+      return;
+    }
+    
+    console.log(`✅ Question ${questionNumber} found:`, question.question_text.substring(0, 50) + '...');
     
     const questionContainer = Utils.$('#question-container');
     const savedAnswer = AppState.answers[questionNumber];
@@ -472,7 +510,7 @@ const Quiz = {
     
     await this.loadQuestions();
     
-    if (this.questions.length > 0) {
+    if (Quiz.questions && Quiz.questions.length > 0) {
       this.displayQuestion(AppState.currentQuestion);
       this.updateNavigation();
     } else {
@@ -558,7 +596,7 @@ const Ranking = {
   async getRanking() {
     try {
       const result = await Utils.apiCall('/api/ranking');
-      return result.rankings;
+      return Array.isArray(result) ? result : (result.rankings || []);
     } catch (error) {
       Utils.showError('ランキングの取得に失敗しました。');
       return [];
@@ -577,7 +615,7 @@ const Ranking = {
         <div class="rank-position ${this.getRankClass(index + 1)}">${index + 1}</div>
         <div class="rank-info">
           <div class="rank-nickname">${rank.nickname}</div>
-          <div class="rank-score">${rank.final_score}点 (${rank.correct_answers}/${AppState.totalQuestions}問正解)</div>
+          <div class="rank-score">${rank.score}点 (${rank.correctCount}/${AppState.totalQuestions}問正解)</div>
         </div>
       </div>
     `).join('');
@@ -882,7 +920,7 @@ async function initHomePage() {
           <div class="rank-position ${Ranking.getRankClass(index + 1)}">${index + 1}</div>
           <div class="rank-info">
             <div class="rank-nickname">${rank.nickname}</div>
-            <div class="rank-score">${rank.final_score}点 (${rank.correct_answers}/10問正解)</div>
+            <div class="rank-score">${rank.score}点 (${rank.correctCount}/10問正解)</div>
           </div>
         </div>
       `).join('') + `

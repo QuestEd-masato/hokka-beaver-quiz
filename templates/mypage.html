@@ -384,7 +384,7 @@
         async function loadUserRanking() {
             try {
                 const result = await Utils.apiCall('/api/ranking');
-                const rankings = result.rankings || [];
+                const rankings = Array.isArray(result) ? result : (result.rankings || []);
                 
                 const userRanking = rankings.find(r => r.nickname === AppState.currentUser.nickname);
                 const userRank = rankings.findIndex(r => r.nickname === AppState.currentUser.nickname) + 1;
@@ -392,13 +392,13 @@
                 if (userRanking && userRank > 0) {
                     Utils.$('#user-rank').textContent = userRank;
                     Utils.$('#user-score-info').innerHTML = `
-                        <div>スコア: ${userRanking.final_score}点</div>
-                        <div>正解数: ${userRanking.correct_answers} / ${userRanking.total_questions}</div>
+                        <div>スコア: ${userRanking.score}点</div>
+                        <div>正解数: ${userRanking.correctCount} / 10問</div>
                         <div>全${rankings.length}人中 ${userRank}位</div>
                     `;
 
                     // ランクバッジ
-                    const badge = getRankBadge(userRank, userRanking.final_score);
+                    const badge = getRankBadge(userRank, userRanking.score);
                     const badgeElement = Utils.$('#rank-badge');
                     badgeElement.style.background = badge.color;
                     badgeElement.style.color = badge.textColor;
