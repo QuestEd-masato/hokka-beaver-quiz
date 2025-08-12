@@ -540,6 +540,45 @@ const Database = {
       created_at: new Date()
     });
 
+    // テストユーザー用のデモデータ（マイページ表示確認用）
+    // testユーザーのクイズ完了データを追加
+    const testUserId = 2;
+    
+    // testユーザーの回答データ（3問正解、7問不正解）
+    const testAnswers = [
+      { questionId: 1, answer: 'A', isCorrect: true },   // 正解
+      { questionId: 2, answer: 'B', isCorrect: true },   // 正解
+      { questionId: 3, answer: 'A', isCorrect: false },  // 不正解
+      { questionId: 4, answer: 'C', isCorrect: false },  // 不正解
+      { questionId: 5, answer: 'B', isCorrect: true },   // 正解
+      { questionId: 6, answer: 'A', isCorrect: false },  // 不正解
+      { questionId: 7, answer: 'C', isCorrect: false },  // 不正解
+      { questionId: 8, answer: 'B', isCorrect: false },  // 不正解
+      { questionId: 9, answer: 'C', isCorrect: false },  // 不正解
+      { questionId: 10, answer: 'A', isCorrect: false }  // 不正解
+    ];
+    
+    // 回答データをuserAnswersに保存
+    testAnswers.forEach(ans => {
+      const key = `${testUserId}_${ans.questionId}`;
+      this.userAnswers.set(key, {
+        userId: testUserId,
+        questionId: ans.questionId,
+        answer: ans.answer,
+        isCorrect: ans.isCorrect,
+        answeredAt: new Date()
+      });
+    });
+    
+    // クイズ完了データを保存
+    this.quizCompletions.set(testUserId, {
+      userId: testUserId,
+      score: 30,  // 3問正解 × 10点
+      correctCount: 3,
+      totalQuestions: 10,
+      completedAt: new Date()
+    });
+
     // データを保存
     this.saveToFile();
   },
