@@ -168,8 +168,8 @@
         // 統計情報表示
         function displayStats(rankings) {
             const totalParticipants = rankings.length;
-            const avgScore = Math.round(rankings.reduce((sum, r) => sum + r.final_score, 0) / totalParticipants);
-            const perfectScores = rankings.filter(r => r.final_score === 100).length;
+            const avgScore = Math.round(rankings.reduce((sum, r) => sum + r.score, 0) / totalParticipants);
+            const perfectScores = rankings.filter(r => r.score === 100).length;
             const completionRate = 95; // デモ用固定値
 
             Utils.$('#total-participants').textContent = totalParticipants;
@@ -219,10 +219,10 @@
                             ${user.nickname}
                         </div>
                         <div style="font-size: 2rem; font-weight: 700; margin-bottom: 0.5rem;">
-                            ${user.final_score}点
+                            ${user.score}点
                         </div>
                         <div style="font-size: 1rem; opacity: 0.8;">
-                            ${user.correct_answers}/10問正解
+                            ${user.correctCount}/10問正解
                         </div>
                     </div>
                 `;
@@ -269,18 +269,18 @@
                         <div class="rank-info">
                             <div class="rank-nickname">${user.nickname}</div>
                             <div class="rank-score">
-                                ${user.final_score}点 (${user.correct_answers}/10問正解) - ${ageGroupText}
+                                ${user.score}点 (${user.correctCount}/10問正解) - ${ageGroupText}
                             </div>
                         </div>
                         <div class="rank-badge" style="
-                            background: ${getScoreBadgeColor(user.final_score)};
+                            background: ${getScoreBadgeColor(user.score)};
                             color: white;
                             padding: 0.25rem 0.75rem;
                             border-radius: 20px;
                             font-size: var(--font-size-sm);
                             font-weight: 600;
                         ">
-                            ${getScoreGrade(user.final_score)}
+                            ${getScoreGrade(user.score)}
                         </div>
                     </div>
                 `;
