@@ -274,7 +274,12 @@ const Database = {
     const answers = [];
     for (const [key, answer] of this.userAnswers) {
       if (answer.userId === userId) {
-        answers.push(answer);
+        // 両方のフィールド名に対応（互換性維持）
+        const questionNumber = answer.questionNumber || answer.questionId;
+        answers.push({
+          ...answer,
+          questionNumber: questionNumber
+        });
       }
     }
     return answers.sort((a, b) => a.questionNumber - b.questionNumber);

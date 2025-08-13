@@ -325,6 +325,55 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // クイズ結果詳細取得API
+  if (pathname.startsWith('/api/quiz/results/') && req.method === 'GET') {
+    const userId = parseInt(pathname.split('/').pop());
+    if (!userId) {
+      Utils.sendError(res, 400, 'ユーザーIDが無効です');
+      return;
+    }
+    
+    try {
+      // ユーザーの回答データを取得
+      const userAnswers = Database.getUserAnswers(userId);
+      
+      // 全問題データを取得
+      const questions = Array.from(Database.questions.values())
+        .sort((a, b) => a.question_number - b.question_number);
+      
+      // 詳細結果を作成
+      const detailedResults = questions.map(question => {
+        const userAnswer = userAnswers.find(ans => ans.questionNumber === question.question_number);
+        
+        return {
+          questionNumber: question.question_number,
+          questionText: question.question_text,
+          choices: {
+            A: question.choice_a,
+            B: question.choice_b,
+            C: question.choice_c,
+            D: question.choice_d
+          },
+          userAnswer: userAnswer ? userAnswer.answer : null,
+          correctAnswer: question.correct_answer,
+          isCorrect: userAnswer ? userAnswer.isCorrect : false,
+          explanation: question.explanation
+        };
+      });
+      
+      Utils.sendJSON(res, {
+        userId: userId,
+        totalQuestions: questions.length,
+        answeredQuestions: userAnswers.length,
+        results: detailedResults
+      });
+    } catch (error) {
+      console.error('Quiz results error:', error);
+      Utils.sendError(res, 500, 'サーバーエラーが発生しました');
+    }
+    return;
+  }
+
   // ランキングAPI
   if (pathname === '/api/ranking') {
     const ranking = Database.getRanking();

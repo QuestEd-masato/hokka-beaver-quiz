@@ -225,44 +225,64 @@
         }
 
         // 詳細結果表示
-        function displayDetailedResults() {
+        async function displayDetailedResults() {
             const detailedContainer = Utils.$('#detailed-results');
             if (!detailedContainer) return;
 
-            // サンプルデータ（実際はサーバーから取得）
-            const userAnswers = Utils.loadFromStorage('quizAnswers') || {};
-            const correctAnswers = ['B', 'C', 'C', 'A', 'C', 'B', 'A', 'A', 'B', 'D'];
-            
-            let detailedHtml = '<div style="display: grid; gap: 1rem;">';
-            
-            for (let i = 1; i <= 10; i++) {
-                const userAnswer = userAnswers[i] || '未回答';
-                const correctAnswer = correctAnswers[i - 1];
-                const isCorrect = userAnswer === correctAnswer;
-                const statusIcon = isCorrect ? '✅' : '❌';
-                const statusClass = isCorrect ? 'correct' : 'incorrect';
-                
-                detailedHtml += `
-                    <div class="result-item ${statusClass}" style="
-                        display: flex; 
-                        align-items: center; 
-                        padding: 1rem; 
-                        background: ${isCorrect ? 'rgba(34, 139, 34, 0.1)' : 'rgba(220, 20, 60, 0.1)'}; 
-                        border-radius: var(--border-radius);
-                        border-left: 4px solid ${isCorrect ? 'var(--success)' : 'var(--error)'};
-                    ">
-                        <div style="font-size: 1.5rem; margin-right: 1rem;">${statusIcon}</div>
-                        <div style="flex: 1;">
-                            <strong>問題 ${i}</strong><br>
-                            あなたの解答: <span style="font-weight: 600;">${userAnswer}</span> | 
-                            正解: <span style="font-weight: 600; color: var(--success);">${correctAnswer}</span>
-                        </div>
-                    </div>
-                `;
+            // 現在のユーザーIDを取得
+            const currentUser = Auth.getCurrentUser();
+            if (!currentUser || !currentUser.id) {
+                detailedContainer.innerHTML = '<div class="text-center" style="padding: 20px; color: var(--error);">ユーザー情報が取得できません</div>';
+                return;
             }
-            
-            detailedHtml += '</div>';
-            detailedContainer.innerHTML = detailedHtml;
+
+            try {
+                // サーバーから詳細結果を取得
+                const response = await fetch(`/api/quiz/results/${currentUser.id}`);
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                let detailedHtml = '<div style="display: grid; gap: 1rem;">';
+                
+                data.results.forEach(result => {
+                    const userAnswer = result.userAnswer || '未回答';
+                    const correctAnswer = result.correctAnswer;
+                    const isCorrect = result.isCorrect;
+                    const statusIcon = isCorrect ? '✅' : '❌';
+                    const statusClass = isCorrect ? 'correct' : 'incorrect';
+                    
+                    detailedHtml += `
+                        <div class="result-item ${statusClass}" style="
+                            display: flex; 
+                            align-items: center; 
+                            padding: 1rem; 
+                            background: ${isCorrect ? 'rgba(34, 139, 34, 0.1)' : 'rgba(220, 20, 60, 0.1)'}; 
+                            border-radius: var(--border-radius);
+                            border-left: 4px solid ${isCorrect ? 'var(--success)' : 'var(--error)'};
+                        ">
+                            <div style="font-size: 1.5rem; margin-right: 1rem;">${statusIcon}</div>
+                            <div style="flex: 1;">
+                                <strong>問題 ${result.questionNumber}</strong><br>
+                                <div style="font-size: 0.9rem; color: var(--gray); margin: 0.5rem 0;">
+                                    ${result.questionText}
+                                </div>
+                                あなたの解答: <span style="font-weight: 600;">${userAnswer}</span> | 
+                                正解: <span style="font-weight: 600; color: var(--success);">${correctAnswer}</span>
+                                ${result.explanation ? `<div style="margin-top: 0.5rem; font-size: 0.9rem; color: var(--gray);">💡 ${result.explanation}</div>` : ''}
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                detailedHtml += '</div>';
+                detailedContainer.innerHTML = detailedHtml;
+            } catch (error) {
+                console.error('詳細結果取得エラー:', error);
+                detailedContainer.innerHTML = '<div class="text-center" style="padding: 20px; color: var(--error);">詳細結果の取得に失敗しました</div>';
+            }
         }
     </script>
 </body>
