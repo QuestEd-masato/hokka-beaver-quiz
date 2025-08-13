@@ -1,6 +1,6 @@
 # hokka-beaver-quiz プロジェクト情報 
 
-*📅 最終更新: 2025-08-12 | バージョン: Phase A Security Fixed*
+*📅 最終更新: 2025-08-13 | バージョン: Phase A Hybrid Architecture (実態調査結果反映版)*
 
 ⚠️ **重要**: このドキュメントは **hokka-beaver-quiz** 専用です。QuestEdとは完全に別のプロジェクトです。
 
@@ -17,7 +17,7 @@
 - **開発言語**: JavaScript (Node.js)
 - **フロントエンド**: HTML/CSS/JavaScript（シングルページ構成）
 - **バックエンド**: Express.js
-- **データベース**: RDS MySQL（完全移行済み）
+- **データベース**: ハイブリッド方式（JSON主導 + RDS部分補助）
 - **インフラ**: AWS EC2 + RDS + Elastic IP
 
 ## 🏗️ アーキテクチャ（Phase A最適化版）
@@ -25,12 +25,16 @@
 ### Phase A実装内容（現在の構成）
 ```
 hokka-beaver-quiz/
-├── enhanced_server.js      # メインサーバー（419行）- Phase A最適化済み
-├── database.js            # データベース管理（681行）- Phase A最適化済み
+├── enhanced_server.js      # メインサーバー（656行）- Phase A最適化済み
+├── database.js            # データベース管理（1,007行）- JSON主導処理
+├── mysql-helper.js        # RDS接続ヘルパー（169行）- 部分機能
+├── sync-local-to-rds.js   # データ同期スクリプト（193行）
 ├── utils.js               # ユーティリティ関数（127行）
 ├── public/                # 静的ファイル
 ├── templates/             # HTMLテンプレート
-└── data/                  # JSONバックアップ用
+├── data/                  # JSONメインデータソース
+├── create_tables.sql      # RDSテーブル定義
+└── database/init.sql      # 別RDS定義（非使用）
 ```
 
 ### Phase A最適化機能
@@ -49,7 +53,25 @@ hokka-beaver-quiz/
 - セキュリティ脆弱性（XSS、認証トークン）
 - **結論**: Phase Aが最適解と判断し、Phase B実装を完全削除
 
-## 🗄️ データベース構成（RDS MySQL）
+## 🗄️ データベース構成（ハイブリッド方式）
+
+### 📊 実際のアーキテクチャ
+```
+【メイン処理フロー】
+Memory Maps (データ処理) ← JSON Files (data/database.json)
+     ↓ 部分的同期                ↑ バッチ保存最適化
+RDS MySQL (補助)               ↑ Phase A1強化
+     ↓                         
+survey_answers, rankings,
+quiz_completions のみ
+```
+
+### データ分散状況
+- **Memory Maps**: 全データ処理の中心（46回参照）
+- **JSON Files**: メインデータソース（15回読み書き）  
+- **RDS MySQL**: 部分データ（2回参照、3テーブル）
+
+## 🗄️ RDS MySQL構成（部分機能）
 
 ### 接続情報
 - **Host**: hokka-db.cdk0iio0s90g.ap-northeast-1.rds.amazonaws.com
@@ -58,31 +80,45 @@ hokka-beaver-quiz/
 - **Instance**: db.t3.micro
 - **Region**: ap-northeast-1 (Tokyo)
 
-### テーブル構造（移行完了）
-```sql
-users (3件)           # ユーザー管理
-├─ admin (管理者)
-├─ test (テストユーザー) 
-└─ aaa (テストユーザー2)
+### テーブル構造と実際のデータ状況
 
-questions (10件)      # 問題データ（完全移行済み）
+**🔍 本番環境データ**（2025-08-13調査結果）:
+```sql
+ユーザー (7人)        # 本番稼働データ
+├─ admin (管理者)
+├─ test (テストユーザー)
+├─ aaa (テストユーザー2) 
+├─ aaaa (追加ユーザー)
+├─ masato (100点完了者)
+├─ tomi (登録済み)
+└─ tomi123 (登録済み)
+
+ランキング (2件完了)  # アクティブデータ
+├─ masato: 100点 (10問正解)
+└─ test: 40点 (3問正解)
+
+questions (10問)     # JSON管理、RDS未移行
 ├─ 北陸製菓企業理念・歴史（4問）
 ├─ ビーバー製品特徴（3問）
 └─ 地域貢献・環境活動（3問）
-
-user_answers          # 回答履歴
-rankings             # ランキング
-quiz_completions     # 完了状況  
-survey_answers       # アンケート
-quiz_sessions        # セッション管理
 ```
 
-### データ移行状況
-- ✅ **ユーザーデータ**: 3件完全移行
-- ✅ **問題データ**: 10問完全移行（選択肢A/B/C/D、解説付き）
-- ✅ **正解分布**: A(2問)、B(4問)、C(1問)、D(3問)
-- ✅ **データ整合性**: 外部キー制約・インデックス設定済み
-- ✅ **機能テスト**: ランダム取得・正解チェック・解説表示正常動作
+**⚠️ データ整合性問題**:
+```
+ローカル(JSON) vs 本番環境
+ユーザー: 3人    vs  7人
+回答数: 11件     vs  22件
+完了者: 1人      vs  2人
+ランキング: 0件   vs  2件
+```
+
+### RDS使用状況
+- ✅ **survey_answers**: RDS管理（MySQLHelper使用）
+- ✅ **rankings**: RDS管理（MySQLHelper使用）
+- ✅ **quiz_completions**: RDS管理（MySQLHelper使用）
+- ❌ **users**: JSON管理（RDS未使用）
+- ❌ **questions**: JSON管理（RDS未使用）
+- ❌ **user_answers**: JSON管理（RDS未使用）
 
 ## 🌐 アクセス・接続方法
 
@@ -191,10 +227,17 @@ Local → GitHub → EC2 (自動同期)
 ### 完了済み項目
 - ✅ Phase A最適化実装
 - ✅ Phase B複雑化の除去
-- ✅ RDS完全移行
 - ✅ セキュリティ修正
 - ✅ 400人規模対応確認
 - ✅ 費用最適化計算
+- ✅ 管理画面統計表示問題修正
+- ✅ システム構成実態調査完了
+
+### 現在の課題
+- ❌ **データ整合性問題**: ローカル vs 本番環境で不整合
+- ❌ **ファイル重複**: 5つのDB関連ファイルが並存
+- ❌ **アーキテクチャ方針**: RDS一元化 vs ハイブリッド維持の未決定
+- ❌ **SQL定義重複**: create_tables.sql vs database/init.sql
 
 ### 将来の拡張可能性
 - 🔄 独自ドメイン + HTTPS対応（お名前.com取得後）
@@ -259,16 +302,22 @@ mysql -h hokka-db.cdk0iio0s90g.ap-northeast-1.rds.amazonaws.com -u admin -p hokk
 
 ---
 
-**最終更新**: 2025-08-11 18:30 JST  
+**最終更新**: 2025-08-13 16:45 JST  
 **作成者**: Claude (Anthropic)  
-**プロジェクト**: hokka-beaver-quiz Phase A Security Fixed  
+**プロジェクト**: hokka-beaver-quiz Phase A Hybrid Architecture (実態反映版)  
 **稼働URL**: http://35.76.100.207/ (✅ 正常稼働中)  
 **GitHub**: https://github.com/QuestEd-masato/hokka-beaver-quiz.git  
 
 **📊 現在の状況**: 
-- Phase A最適化版稼働中
-- RDSデータ移行完了（10問、3ユーザー）
+- Phase A最適化版稼働中（ハイブリッドアーキテクチャ）
+- 本番環境: 7ユーザー、2完了者、22回答（実データ）
+- ローカル環境: 3ユーザー、1完了者、11回答（開発データ）
 - 400人規模対応準備完了
-- 文化祭利用可能状態
+- 文化祭利用可能状態（基本機能は安定稼働）
+
+**⚠️ 重要な調査結果**:
+本調査により、従来記載されていた「RDS完全移行済み」は実態と異なることが判明。
+実際は**JSON主導 + RDS部分補助**のハイブリッド方式で稼働中。
+基本機能は正常動作しているが、アーキテクチャ設計の見直しが必要。
 
 **⚠️ 再度確認**: このドキュメントは hokka-beaver-quiz 専用です。QuestEd プロジェクトとは無関係です。
