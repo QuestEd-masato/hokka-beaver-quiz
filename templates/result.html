@@ -163,13 +163,31 @@
         });
 
         // 結果表示
-        function displayResults() {
-            // ローカルストレージから結果を取得（デモ用）
-            const quizResult = Utils.loadFromStorage('quizResult') || {
-                score: 70,
-                correctCount: 7,
-                totalQuestions: 10
-            };
+        async function displayResults() {
+            // サーバーから結果を取得
+            const currentUser = Auth.getCurrentUser();
+            if (!currentUser || !currentUser.id) {
+                console.error('ユーザー情報が取得できません');
+                return;
+            }
+            
+            let quizResult;
+            try {
+                const statusResult = await Utils.apiCall(`/api/quiz/status/${currentUser.id}`);
+                quizResult = {
+                    score: statusResult.score || 0,
+                    correctCount: statusResult.correctCount || 0,
+                    totalQuestions: statusResult.totalQuestions || 10
+                };
+            } catch (error) {
+                console.error('結果取得エラー:', error);
+                // フォールバック：デフォルト値
+                quizResult = {
+                    score: 0,
+                    correctCount: 0,
+                    totalQuestions: 10
+                };
+            }
 
             // スコア表示
             const finalScoreElement = Utils.$('#final-score');

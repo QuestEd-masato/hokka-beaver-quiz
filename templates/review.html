@@ -150,8 +150,22 @@
                 const questionsResult = await Utils.apiCall('/api/quiz/questions');
                 questions = questionsResult.questions;
 
-                // ユーザー解答読み込み
-                userAnswers = Utils.loadFromStorage('quizAnswers') || {};
+                // ユーザー解答をサーバーから読み込み
+                try {
+                    const userAnswersResult = await Utils.apiCall(`/api/quiz/results/${AppState.currentUser.id}`);
+                    userAnswers = {};
+                    // API形式を既存形式に変換
+                    if (userAnswersResult && userAnswersResult.results) {
+                        userAnswersResult.results.forEach(result => {
+                            if (result.userAnswer) {
+                                userAnswers[result.questionNumber] = result.userAnswer;
+                            }
+                        });
+                    }
+                } catch (error) {
+                    console.error('解答データ取得エラー:', error);
+                    userAnswers = {}; // フォールバック
+                }
 
                 // ランキングデータ読み込み
                 const rankingResult = await Utils.apiCall('/api/ranking');

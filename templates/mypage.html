@@ -288,18 +288,9 @@
                 const statusResult = await Utils.apiCall(`/api/quiz/status/${AppState.currentUser.id}`);
                 const isCompleted = statusResult.isCompleted;
                 
-                // クイズ完了時は10/10として表示、未完了時はローカルストレージから取得
-                let answeredCount = 0;
-                const totalQuestions = 10;
-                
-                if (isCompleted) {
-                    // 完了済みの場合は10問全て解答済みとして表示
-                    answeredCount = totalQuestions;
-                } else {
-                    // 未完了の場合はローカルストレージから取得
-                    const answers = Utils.loadFromStorage('quizAnswers') || {};
-                    answeredCount = Object.keys(answers).length;
-                }
+                // サーバーデータを信頼できる唯一のソースとして使用
+                const answeredCount = statusResult.answeredCount;
+                const totalQuestions = statusResult.totalQuestions;
                 
                 const progress = (answeredCount / totalQuestions) * 100;
 

@@ -553,15 +553,28 @@
         }
 
         // アンケート状況確認
-        function checkSurveyStatus() {
-            const surveyCompleted = Utils.loadFromStorage('surveyCompleted');
+        async function checkSurveyStatus() {
             const submitBtn = Utils.$('#submit-survey-btn');
             
-            if (surveyCompleted && submitBtn) {
-                submitBtn.disabled = true;
-                submitBtn.textContent = '✅ 送信済み';
-                submitBtn.classList.remove('btn-success');
-                submitBtn.classList.add('btn-outline');
+            try {
+                // サーバーからアンケート状況を取得
+                const currentUser = Auth.getCurrentUser();
+                if (!currentUser || !currentUser.id) {
+                    return;
+                }
+                
+                const surveyStatus = await Utils.apiCall(`/api/survey/status/${currentUser.id}`);
+                const surveyCompleted = surveyStatus.completed;
+                
+                if (surveyCompleted && submitBtn) {
+                    submitBtn.disabled = true;
+                    submitBtn.textContent = '✅ 送信済み';
+                    submitBtn.classList.remove('btn-success');
+                    submitBtn.classList.add('btn-outline');
+                }
+            } catch (error) {
+                console.error('アンケート状況取得エラー:', error);
+                // エラー時はデフォルト状態を維持
             }
         }
     </script>

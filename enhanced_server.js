@@ -288,12 +288,23 @@ const server = http.createServer(async (req, res) => {
       const answers = Database.getUserAnswers(userId);
       const totalQuestions = Database.questions.size;
       
-      Utils.sendJSON(res, {
+      // 完了済みの場合、スコア情報も含める
+      let responseData = {
         isCompleted: isCompleted,
         answeredCount: answers.length,
         totalQuestions: totalQuestions,
         progress: Math.round((answers.length / totalQuestions) * 100)
-      });
+      };
+      
+      if (isCompleted) {
+        const completion = Database.quizCompletions.get(userId);
+        if (completion) {
+          responseData.score = completion.score;
+          responseData.correctCount = completion.correctCount;
+        }
+      }
+      
+      Utils.sendJSON(res, responseData);
     } catch (error) {
       Utils.sendError(res, 500, 'サーバーエラーが発生しました');
     }
