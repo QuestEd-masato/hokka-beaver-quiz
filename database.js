@@ -14,6 +14,7 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const MySQLHelper = require('./mysql-helper');
 
 // === パフォーマンス最適化設定 (Phase A2) ===
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
@@ -278,29 +279,43 @@ const Database = {
    * クイズ完了処理
    * 最終スコア計算とランキング更新
    */
-  completeQuiz(userId, additionalData = {}) {
+  async completeQuiz(userId, additionalData = {}) {
     const answers = this.getUserAnswers(userId);
     const correctCount = answers.filter(a => a.isCorrect).length;
     const totalQuestions = this.questions.size;
-    const score = (correctCount / totalQuestions) * 100;
+    const baseScore = (correctCount / totalQuestions) * 100;
     
-    // クイズ完了をマーク
+    // アンケート完了確認（ボーナスポイント判定）
+    const surveyStatus = await MySQLHelper.getSurveyStatus(userId);
+    const bonusPoints = surveyStatus.completed ? 10 : 0;
+    const finalScore = baseScore + bonusPoints;
+    
+    // クイズ完了をマーク（メモリ）
     this.quizCompletions.set(userId, {
       userId: userId,
       completedAt: new Date(),
-      score: score,
+      score: finalScore,
+      baseScore: baseScore,
+      bonusPoints: bonusPoints,
       correctCount: correctCount,
       totalQuestions: totalQuestions,
       ...additionalData
     });
     
-    // ランキング更新
-    this.updateRanking(userId, score, correctCount);
+    // MySQLに保存
+    await MySQLHelper.saveQuizCompletion(userId, finalScore, correctCount);
+    
+    // ランキング更新（メモリ + MySQL）
+    const user = this.users.get(userId);
+    const nickname = user ? user.nickname : 'Unknown';
+    await this.updateRanking(userId, finalScore, correctCount, nickname, surveyStatus.completed);
     
     this.scheduleSave(); // Phase A1: バッチ保存に変更
     
     return {
-      score: score,
+      score: finalScore,
+      baseScore: baseScore,
+      bonusPoints: bonusPoints,
       correctCount: correctCount,
       totalQuestions: totalQuestions,
       answers: answers
@@ -311,13 +326,19 @@ const Database = {
    * ランキング更新
    * スコア順でランキングを管理
    */
-  updateRanking(userId, score, correctCount) {
+  async updateRanking(userId, score, correctCount, nickname = null, hasBonus = false) {
+    // メモリに保存
     this.rankings.set(userId, {
       userId: userId,
       score: score,
       correctCount: correctCount,
       updatedAt: new Date()
     });
+    
+    // MySQLに保存（ボーナス込み）
+    if (nickname) {
+      await MySQLHelper.saveRanking(userId, nickname, score, correctCount, false);
+    }
   },
   
   /**

@@ -229,16 +229,17 @@ const server = http.createServer(async (req, res) => {
   if (pathname === '/api/survey/submit' && req.method === 'POST') {
     const data = await getBody();
     try {
-      // アンケート重複提出チェック
-      const isCompleted = Database.surveyAnswers.has(data.userId) ||
-                         Array.from(Database.surveyAnswers.values()).some(survey => survey.userId === data.userId);
+      const MySQLHelper = require('./mysql-helper');
       
-      if (isCompleted) {
-        Utils.sendError(res, 400, '既にアンケートに回答済みです');
+      // MySQLでアンケート保存（重複チェック込み）
+      const result = await MySQLHelper.saveSurveyAnswer(data.userId, data.feedback);
+      
+      if (!result.success) {
+        Utils.sendError(res, 400, result.message);
         return;
       }
       
-      // アンケート保存
+      // メモリにも保存（後方互換性）
       Database.surveyAnswers.set(data.userId, {
         userId: data.userId,
         feedback: data.feedback || '',
@@ -246,8 +247,29 @@ const server = http.createServer(async (req, res) => {
       });
       Database.saveToFile();
       
-      Utils.sendJSON(res, { success: true, message: 'アンケートを送信しました！ありがとうございました。' });
+      // クイズ完了済みの場合、ランキングを再計算してボーナス反映
+      if (Database.quizCompletions.has(data.userId)) {
+        const completion = Database.quizCompletions.get(data.userId);
+        const user = Database.users.get(data.userId);
+        const nickname = user ? user.nickname : 'Unknown';
+        
+        // ボーナス付きでランキング更新
+        const newScore = completion.score + 10;
+        await Database.updateRanking(data.userId, newScore, completion.correctCount, nickname, true);
+        
+        Utils.sendJSON(res, { 
+          success: true, 
+          message: 'アンケートを送信しました！ボーナスポイント(+10点)を獲得しました！',
+          bonusPoints: 10
+        });
+      } else {
+        Utils.sendJSON(res, { 
+          success: true, 
+          message: 'アンケートを送信しました！クイズ完了後にボーナスポイントが加算されます。'
+        });
+      }
     } catch (error) {
+      console.error('Survey submit error:', error);
       Utils.sendError(res, 500, 'サーバーエラーが発生しました');
     }
     return;
@@ -287,13 +309,17 @@ const server = http.createServer(async (req, res) => {
     }
     
     try {
-      const completed = Database.surveyAnswers.has(userId) ||
-                       Array.from(Database.surveyAnswers.values()).some(survey => survey.userId === userId);
+      const MySQLHelper = require('./mysql-helper');
+      
+      // MySQLから状態取得
+      const status = await MySQLHelper.getSurveyStatus(userId);
       
       Utils.sendJSON(res, {
-        completed: completed
+        completed: status.completed,
+        submittedAt: status.submittedAt
       });
     } catch (error) {
+      console.error('Survey status error:', error);
       Utils.sendError(res, 500, 'サーバーエラーが発生しました');
     }
     return;
