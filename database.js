@@ -254,6 +254,11 @@ const Database = {
     this.userAnswers.set(answerKey, userAnswer);
     this.scheduleSave(); // Phase A1: バッチ保存に変更
     
+    // MySQL保存（非同期、エラー無視）- 既存処理に影響しない
+    MySQLHelper.saveUserAnswer(userId, questionNumber, answer, isCorrect).catch(err => {
+      // MySQL保存失敗でも既存処理は継続
+    });
+    
     return {
       correct: isCorrect,
       correctAnswer: question.correct_answer,
