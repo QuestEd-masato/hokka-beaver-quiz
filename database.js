@@ -254,10 +254,8 @@ const Database = {
     this.userAnswers.set(answerKey, userAnswer);
     this.scheduleSave(); // Phase A1: バッチ保存に変更
     
-    // MySQL保存（非同期、エラー無視）- 既存処理に影響しない
-    MySQLHelper.saveUserAnswer(userId, questionNumber, answer, isCorrect).catch(err => {
-      // MySQL保存失敗でも既存処理は継続
-    });
+    // RDS保存機能は将来実装予定
+    // 現在はローカルストレージのみ使用
     
     return {
       correct: isCorrect,
@@ -407,11 +405,19 @@ const Database = {
   init() {
     // まずファイルからデータを復元を試行
     const restored = this.loadFromFile();
-    if (restored) {
-      // データが復元された場合は初期データ設定をスキップ
-      // データ整合性チェックを実行
+    const hasValidData = this.questions.size > 0 && this.users.size > 0;
+    
+    if (restored && hasValidData) {
+      // 有効なデータが復元された場合は初期データ設定をスキップ
+      console.log(`✅ 有効データ復元: 問題${this.questions.size}問, ユーザー${this.users.size}名`);
       this.checkDataIntegrity();
       return;
+    }
+    
+    if (restored && !hasValidData) {
+      console.log('⚠️ 空データファイル検出: 初期データを作成します');
+    } else {
+      console.log('📄 データファイル未存在: 初期データを作成します');
     }
     
     // データが復元できなかった場合のみ初期データを設定
@@ -634,6 +640,10 @@ const Database = {
     
     this.questions.set(questionId, question);
     this.saveToFile();
+    
+    // RDS同期機能は将来実装予定
+    // 現在はローカルストレージのみ使用
+    
     return question;
   },
   
@@ -657,6 +667,117 @@ const Database = {
       }
     }
     return null;
+  },
+  
+  /**
+   * ユーザー削除（管理者専用）
+   */
+  deleteUser(userId, adminUser) {
+    // 管理者権限チェック
+    if (!this.isAdmin(adminUser)) {
+      throw new Error('管理者権限が必要です');
+    }
+    
+    // 自己削除防止
+    if (userId === adminUser.id) {
+      throw new Error('自分自身は削除できません');
+    }
+    
+    // ユーザー存在チェック
+    if (!this.users.has(userId)) {
+      throw new Error('ユーザーが見つかりません');
+    }
+    
+    const userData = this.users.get(userId);
+    
+    // 管理者の削除防止（安全対策）
+    if (userData.is_admin) {
+      throw new Error('管理者ユーザーは削除できません');
+    }
+    
+    // 関連データも削除
+    this.deleteUserRelatedData(userId);
+    
+    // ユーザー削除
+    this.users.delete(userId);
+    this.scheduleSave();
+    
+    return { success: true, deletedUser: userData.nickname };
+  },
+  
+  /**
+   * ユーザー関連データ削除
+   */
+  deleteUserRelatedData(userId) {
+    // 回答データ削除
+    for (const [key, answer] of this.userAnswers) {
+      if (answer.userId === userId) {
+        this.userAnswers.delete(key);
+      }
+    }
+    
+    // クイズ完了データ削除
+    this.quizCompletions.delete(userId);
+    
+    // ランキングデータ削除
+    this.rankings.delete(userId);
+    
+    // アンケートデータ削除
+    this.surveyAnswers.delete(userId);
+    
+    // セッションデータ削除
+    for (const [key, session] of this.quizSessions) {
+      if (session.userId === userId) {
+        this.quizSessions.delete(key);
+      }
+    }
+  },
+  
+  /**
+   * ユーザー情報更新（管理者専用）
+   */
+  updateUser(userId, updateData, adminUser) {
+    // 管理者権限チェック
+    if (!this.isAdmin(adminUser)) {
+      throw new Error('管理者権限が必要です');
+    }
+    
+    // ユーザー存在チェック
+    if (!this.users.has(userId)) {
+      throw new Error('ユーザーが見つかりません');
+    }
+    
+    const user = this.users.get(userId);
+    
+    // 更新可能フィールドのみ許可
+    const allowedFields = ['real_name', 'age_group', 'gender'];
+    const updates = {};
+    
+    for (const field of allowedFields) {
+      if (updateData[field] !== undefined) {
+        updates[field] = updateData[field];
+      }
+    }
+    
+    // ニックネーム変更の場合は重複チェック
+    if (updateData.nickname && updateData.nickname !== user.nickname) {
+      for (const [id, existingUser] of this.users) {
+        if (id !== userId && existingUser.nickname === updateData.nickname) {
+          throw new Error('このニックネームは既に使用されています');
+        }
+      }
+      updates.nickname = updateData.nickname;
+    }
+    
+    // ユーザーデータ更新
+    const updatedUser = { ...user, ...updates };
+    this.users.set(userId, updatedUser);
+    this.scheduleSave();
+    
+    return {
+      success: true,
+      user: { ...updatedUser, password_hash: undefined }
+    };
   },
   
   /**
@@ -746,6 +867,141 @@ const Database = {
     });
 
     return csvData.map(row => row.join(',')).join('\n');
+  },
+  
+  /**
+   * 問題更新（管理者専用）
+   */
+  updateQuestion(questionId, updateData, adminUser) {
+    // 管理者権限チェック
+    if (!this.isAdmin(adminUser)) {
+      throw new Error('管理者権限が必要です');
+    }
+    
+    // 問題存在チェック
+    if (!this.questions.has(questionId)) {
+      throw new Error('問題が見つかりません');
+    }
+    
+    const question = this.questions.get(questionId);
+    
+    // 更新可能フィールドのみ許可
+    const allowedFields = ['question_text', 'choice_a', 'choice_b', 'choice_c', 'choice_d', 'correct_answer', 'explanation'];
+    const updates = {};
+    
+    for (const field of allowedFields) {
+      if (updateData[field] !== undefined) {
+        updates[field] = updateData[field];
+      }
+    }
+    
+    // 問題データ更新
+    const updatedQuestion = { ...question, ...updates };
+    this.questions.set(questionId, updatedQuestion);
+    this.scheduleSave();
+    
+    // RDS同期機能は将来実装予定
+    // 現在はローカルストレージのみ使用
+    
+    return {
+      success: true,
+      question: updatedQuestion
+    };
+  },
+  
+  /**
+   * 問題削除（管理者専用）
+   */
+  deleteQuestion(questionId, adminUser) {
+    // 管理者権限チェック
+    if (!this.isAdmin(adminUser)) {
+      throw new Error('管理者権限が必要です');
+    }
+    
+    // 問題存在チェック
+    if (!this.questions.has(questionId)) {
+      throw new Error('問題が見つかりません');
+    }
+    
+    const question = this.questions.get(questionId);
+    
+    // 最低問題数チェック（1問は残す）
+    if (this.questions.size <= 1) {
+      throw new Error('最低1問は必要です。削除できません');
+    }
+    
+    // 問題削除
+    this.questions.delete(questionId);
+    
+    // 関連する回答データも削除
+    for (const [key, answer] of this.userAnswers) {
+      if (answer.questionNumber === question.question_number) {
+        this.userAnswers.delete(key);
+      }
+    }
+    
+    this.scheduleSave();
+    
+    // RDS同期機能は将来実装予定
+    // 現在はローカルストレージのみ使用
+    
+    return { 
+      success: true, 
+      deletedQuestion: question.question_text 
+    };
+  },
+  
+  /**
+   * 参加者詳細情報取得（管理者専用）
+   */
+  getParticipantsWithDetails() {
+    const participants = [];
+    
+    for (const [userId, user] of this.users) {
+      if (user.is_admin) continue; // 管理者は除外
+      
+      // ユーザーの回答数と正解数を計算
+      const userAnswers = this.getUserAnswers(userId);
+      const correctCount = userAnswers.filter(a => a.isCorrect).length;
+      
+      // クイズ完了状況
+      const isQuizCompleted = this.quizCompletions.has(userId);
+      const completion = this.quizCompletions.get(userId);
+      
+      // アンケート状況
+      const isSurveyCompleted = this.surveyAnswers.has(userId);
+      
+      // ランキング情報
+      const ranking = this.rankings.get(userId);
+      
+      participants.push({
+        id: userId,
+        nickname: user.nickname,
+        real_name: user.real_name,
+        age_group: user.age_group,
+        gender: user.gender,
+        created_at: user.created_at,
+        quiz: {
+          completed: isQuizCompleted,
+          answeredCount: userAnswers.length,
+          correctCount: correctCount,
+          score: completion ? completion.score : 0,
+          completedAt: completion ? completion.completedAt : null
+        },
+        survey: {
+          completed: isSurveyCompleted
+        },
+        ranking: ranking ? {
+          score: ranking.score,
+          correctCount: ranking.correctCount
+        } : null
+      });
+    }
+    
+    // 作成日時順でソート
+    participants.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    
+    return participants;
   }
 };
 

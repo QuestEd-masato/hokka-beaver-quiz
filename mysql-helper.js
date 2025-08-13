@@ -154,22 +154,6 @@ const MySQLHelper = {
     }
   },
   
-  // 問題解答保存（非同期、エラー無視で既存処理を妨げない）
-  async saveUserAnswer(userId, questionNumber, answer, isCorrect) {
-    const pool = getPool();
-    try {
-      await pool.execute(
-        'INSERT IGNORE INTO user_answers (user_id, question_number, answer, is_correct, answered_at) VALUES (?, ?, ?, ?, NOW())',
-        [userId, questionNumber, answer, isCorrect ? 1 : 0]
-      );
-      return { success: true };
-    } catch (error) {
-      // エラーをログに記録するが、既存処理は継続
-      console.warn('MySQL user_answer save warning (non-critical):', error.message);
-      return { success: false, error: error.message };
-    }
-  },
-  
   // 接続テスト
   async testConnection() {
     const pool = getPool();

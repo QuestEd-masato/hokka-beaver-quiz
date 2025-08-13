@@ -42,8 +42,26 @@
 
             <!-- 管理画面メイン -->
             <div id="admin-main" style="display: none;">
+                <!-- ナビゲーションボタン -->
+                <div class="admin-navigation" style="margin-bottom: 2rem;">
+                    <div style="display: flex; gap: 1rem; flex-wrap: wrap; justify-content: center;">
+                        <button onclick="scrollToSection('dashboard-section')" class="btn btn-primary">
+                            📊 ダッシュボード
+                        </button>
+                        <button onclick="scrollToSection('participants-section')" class="btn btn-success">
+                            👥 参加者一覧
+                        </button>
+                        <button onclick="scrollToSection('questions-section')" class="btn btn-warning">
+                            📝 問題管理
+                        </button>
+                        <button onclick="scrollToSection('user-management-section')" class="btn btn-secondary">
+                            🔧 ユーザー管理
+                        </button>
+                    </div>
+                </div>
+                
                 <!-- 管理者情報 -->
-                <div class="card fade-in">
+                <div class="card fade-in" id="dashboard-section">
                     <div class="card-header">
                         <h2>👤 管理者ダッシュボード</h2>
                     </div>
@@ -72,8 +90,8 @@
                     </div>
                 </div>
 
-                <!-- 優先機能セクション -->
-                <div class="priority-section">
+                <!-- 優先機能セクション / 問題管理セクション -->
+                <div class="priority-section" id="questions-section">
                     <h2 style="color: var(--primary); margin-bottom: 1rem;">🎯 優先機能</h2>
                     
                     <!-- クイック問題編集 -->
@@ -170,6 +188,153 @@
                                         📥 統合レポートCSV出力
                                     </button>
                                 </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 参加者一覧セクション -->
+                <div class="participants-section">
+                    <h2 style="color: var(--secondary); margin: 2rem 0 1rem 0;">👥 参加者一覧</h2>
+                    
+                    <!-- 参加者詳細一覧 -->
+                    <div class="card slide-in" style="animation-delay: 0.4s;">
+                        <div class="card-header">
+                            <h3>📊 参加者詳細一覧</h3>
+                            <p style="color: var(--gray); font-size: var(--font-size-sm); margin: 0.5rem 0 0 0;">
+                                参加者の進捗状況、成績、アンケート回答状況を確認
+                            </p>
+                        </div>
+                        <div class="card-body">
+                            <!-- 参加者統計サマリー -->
+                            <div class="participants-summary" style="margin-bottom: 2rem; padding: 1rem; background: var(--light-gray); border-radius: var(--border-radius);">
+                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; text-align: center;">
+                                    <div class="summary-stat">
+                                        <div class="summary-number" id="participants-total">0</div>
+                                        <div class="summary-label">総参加者</div>
+                                    </div>
+                                    <div class="summary-stat">
+                                        <div class="summary-number" id="quiz-completed-count">0</div>
+                                        <div class="summary-label">クイズ完了</div>
+                                    </div>
+                                    <div class="summary-stat">
+                                        <div class="summary-number" id="survey-completed-count">0</div>
+                                        <div class="summary-label">アンケート回答</div>
+                                    </div>
+                                    <div class="summary-stat">
+                                        <div class="summary-number" id="average-score">0</div>
+                                        <div class="summary-label">平均スコア</div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- 参加者フィルタ -->
+                            <div class="participants-filters" style="margin-bottom: 1.5rem;">
+                                <div style="display: grid; grid-template-columns: 1fr auto auto auto; gap: 1rem; align-items: center;">
+                                    <input type="text" id="participant-search" class="form-input" 
+                                           placeholder="🔍 名前またはニックネームで検索">
+                                    <select id="quiz-status-filter" class="form-input">
+                                        <option value="">全ステータス</option>
+                                        <option value="completed">クイズ完了</option>
+                                        <option value="progress">進行中</option>
+                                        <option value="not-started">未開始</option>
+                                    </select>
+                                    <select id="age-group-filter" class="form-input">
+                                        <option value="">全年齢層</option>
+                                        <option value="preschool">ようちえん・ほいくえん</option>
+                                        <option value="elementary">小学生</option>
+                                        <option value="junior_high">中学生</option>
+                                        <option value="high_school">高校生</option>
+                                        <option value="adult">大人</option>
+                                    </select>
+                                    <button onclick="refreshParticipants()" class="btn btn-outline">🔄 更新</button>
+                                </div>
+                            </div>
+                            
+                            <!-- 参加者テーブル -->
+                            <div class="participants-table-container">
+                                <table class="participants-table">
+                                    <thead>
+                                        <tr>
+                                            <th>参加者</th>
+                                            <th>年齢層</th>
+                                            <th>クイズ進捗</th>
+                                            <th>スコア</th>
+                                            <th>アンケート</th>
+                                            <th>登録日時</th>
+                                            <th>操作</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="participants-table-body">
+                                        <!-- 参加者データがここに表示されます -->
+                                        <tr>
+                                            <td colspan="7" class="text-center" style="padding: 2rem;">
+                                                参加者データを読み込み中...
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ユーザー管理セクション -->
+                <div class="user-management-section">
+                    <h2 style="color: var(--accent); margin: 2rem 0 1rem 0;">👥 ユーザー管理</h2>
+                    
+                    <!-- ユーザー一覧・管理 -->
+                    <div class="card slide-in" style="animation-delay: 0.3s;">
+                        <div class="card-header">
+                            <h3>👤 ユーザー一覧・管理</h3>
+                            <p style="color: var(--gray); font-size: var(--font-size-sm); margin: 0.5rem 0 0 0;">
+                                登録されたユーザーの確認、編集、削除
+                            </p>
+                        </div>
+                        <div class="card-body">
+                            <!-- 検索・フィルタ -->
+                            <div class="user-controls" style="margin-bottom: 1.5rem;">
+                                <div style="display: grid; grid-template-columns: 1fr auto auto; gap: 1rem; align-items: center;">
+                                    <input type="text" id="user-search" class="form-input" 
+                                           placeholder="🔍 ニックネームまたは本名で検索">
+                                    <select id="age-filter" class="form-input">
+                                        <option value="">全年齢層</option>
+                                        <option value="preschool">ようちえん・ほいくえん</option>
+                                        <option value="elementary">小学生</option>
+                                        <option value="junior_high">中学生</option>
+                                        <option value="high_school">高校生</option>
+                                        <option value="adult">大人</option>
+                                    </select>
+                                    <button onclick="loadUserList()" class="btn btn-primary">
+                                        🔄 更新
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <!-- ユーザー統計 -->
+                            <div id="user-stats" class="user-stats" style="margin-bottom: 1.5rem;">
+                                <!-- 統計情報がここに表示されます -->
+                            </div>
+                            
+                            <!-- ユーザー一覧テーブル -->
+                            <div class="table-container">
+                                <table class="admin-table" id="users-table">
+                                    <thead>
+                                        <tr>
+                                            <th>ID</th>
+                                            <th>ニックネーム</th>
+                                            <th>本名</th>
+                                            <th>年齢層</th>
+                                            <th>性別</th>
+                                            <th>権限</th>
+                                            <th>クイズ進捗</th>
+                                            <th>操作</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="users-table-body">
+                                        <!-- ユーザーデータがここに表示されます -->
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
                     </div>
@@ -300,6 +465,7 @@
                 loadDashboardStats(),
                 loadQuickEditQuestions(),
                 loadQuestionsList(),
+                loadParticipants(),
                 loadSystemStats()
             ]);
 
@@ -334,7 +500,7 @@
         async function loadQuickEditQuestions() {
             try {
                 const result = await Utils.apiCall('/api/quiz/questions');
-                const questions = result.questions || [];
+                const questions = result || []; // APIは直接配列を返す
                 const container = Utils.$('#quick-edit-questions');
 
                 const questionsHtml = questions.slice(0, 6).map(q => `
@@ -365,8 +531,8 @@
         // 問題一覧読み込み
         async function loadQuestionsList() {
             try {
-                const result = await Utils.apiCall('/api/quiz/questions');
-                const questions = result.questions || [];
+                const result = await Utils.apiCall(`/api/admin/questions?admin_id=${AppState.currentUser.id}`);
+                const questions = result.questions || []; // 管理者用APIは{success:true, questions:[]}形式
                 const container = Utils.$('#questions-list');
 
                 const questionsHtml = questions.map(q => `
@@ -390,6 +556,130 @@
 
             } catch (error) {
                 console.error('問題一覧読み込みエラー:', error);
+            }
+        }
+
+        // 参加者一覧読み込み
+        async function loadParticipants() {
+            try {
+                const result = await Utils.apiCall(`/api/admin/participants?admin_id=${AppState.currentUser.id}`);
+                const participants = result.participants || [];
+                
+                // 統計更新
+                updateParticipantsStats(participants);
+                
+                // テーブル更新
+                displayParticipantsTable(participants);
+                
+            } catch (error) {
+                console.error('参加者一覧読み込みエラー:', error);
+            }
+        }
+
+        // 参加者統計更新
+        function updateParticipantsStats(participants) {
+            const totalParticipants = participants.length;
+            const quizCompleted = participants.filter(p => p.quiz.completed).length;
+            const surveyCompleted = participants.filter(p => p.survey.completed).length;
+            const averageScore = quizCompleted > 0 ? 
+                Math.round(participants.reduce((sum, p) => sum + (p.quiz.score || 0), 0) / quizCompleted) : 0;
+
+            Utils.$('#participants-total').textContent = totalParticipants;
+            Utils.$('#quiz-completed-count').textContent = quizCompleted;
+            Utils.$('#survey-completed-count').textContent = surveyCompleted;
+            Utils.$('#average-score').textContent = averageScore + '点';
+        }
+
+        // 参加者テーブル表示
+        function displayParticipantsTable(participants) {
+            const tbody = Utils.$('#participants-table-body');
+            
+            if (participants.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="7" class="text-center" style="padding: 2rem;">
+                            参加者がいません
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            const participantsHtml = participants.map(participant => {
+                const ageGroupLabels = {
+                    'preschool': 'ようちえん・ほいくえん',
+                    'elementary': '小学生',
+                    'junior_high': '中学生',
+                    'high_school': '高校生',
+                    'adult': '大人'
+                };
+
+                const quizStatus = participant.quiz.completed ? 'completed' : 
+                    (participant.quiz.answeredCount > 0 ? 'progress' : 'not-started');
+                
+                const quizStatusText = participant.quiz.completed ? '✅ 完了' : 
+                    (participant.quiz.answeredCount > 0 ? `🔄 ${participant.quiz.answeredCount}/10問` : '⏳ 未開始');
+
+                const surveyStatusText = participant.survey.completed ? '✅ 完了' : '⏳ 未回答';
+
+                return `
+                    <tr>
+                        <td>
+                            <div>
+                                <strong>${participant.nickname}</strong>
+                                <br><small>${participant.real_name}</small>
+                            </div>
+                        </td>
+                        <td>${ageGroupLabels[participant.age_group] || participant.age_group}</td>
+                        <td>
+                            <span class="status-badge status-${quizStatus}">${quizStatusText}</span>
+                        </td>
+                        <td>
+                            <strong>${participant.quiz.score}点</strong>
+                            ${participant.quiz.correctCount ? `<br><small>${participant.quiz.correctCount}問正解</small>` : ''}
+                        </td>
+                        <td>
+                            <span class="status-badge ${participant.survey.completed ? 'status-completed' : 'status-not-started'}">
+                                ${surveyStatusText}
+                            </span>
+                        </td>
+                        <td>
+                            <small>${new Date(participant.created_at).toLocaleDateString('ja-JP')}</small>
+                        </td>
+                        <td>
+                            <button onclick="viewParticipantDetails(${participant.id})" class="btn btn-outline btn-small">
+                                👁️ 詳細
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+
+            tbody.innerHTML = participantsHtml;
+        }
+
+        // 参加者更新
+        async function refreshParticipants() {
+            await loadParticipants();
+        }
+
+        // 参加者詳細表示
+        function viewParticipantDetails(participantId) {
+            // 詳細モーダル実装（今後追加可能）
+            Utils.showSuccess(`参加者 ID ${participantId} の詳細機能は今後実装予定です`);
+        }
+        
+        // セクションへのスクロール
+        function scrollToSection(sectionId) {
+            const section = document.getElementById(sectionId);
+            if (section) {
+                section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                
+                // ハイライト効果
+                section.style.boxShadow = '0 0 20px rgba(210, 105, 30, 0.5)';
+                setTimeout(() => {
+                    section.style.boxShadow = '';
+                }, 1500);
             }
         }
 
@@ -578,7 +868,7 @@
             try {
                 // 問題データを取得
                 const result = await Utils.apiCall('/api/quiz/questions');
-                const question = result.questions.find(q => q.id === questionId);
+                const question = result.find(q => q.id === questionId);
                 
                 if (!question) {
                     Utils.showError('問題が見つかりません');
@@ -681,6 +971,7 @@
         // 問題編集を保存
         async function saveQuestionEdit(questionId) {
             const updatedData = {
+                admin_id: AppState.currentUser.id,
                 question_text: document.getElementById('edit-question-text').value,
                 choice_a: document.getElementById('edit-choice-a').value,
                 choice_b: document.getElementById('edit-choice-b').value,
@@ -712,7 +1003,10 @@
             
             try {
                 const result = await Utils.apiCall(`/api/admin/questions/${questionId}`, {
-                    method: 'DELETE'
+                    method: 'DELETE',
+                    body: JSON.stringify({
+                        admin_id: AppState.currentUser.id
+                    })
                 });
 
                 if (result.success) {
@@ -878,6 +1172,375 @@
                 text-align: center;
             }
         }
+        
+        /* 参加者一覧用スタイル */
+        .participants-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+        
+        .participants-table th,
+        .participants-table td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid var(--light-gray);
+        }
+        
+        .participants-table th {
+            background: var(--light-gray);
+            font-weight: 600;
+            color: var(--dark);
+        }
+        
+        .participants-table tbody tr:hover {
+            background: rgba(210, 105, 30, 0.05);
+        }
+        
+        .status-badge {
+            padding: 0.25rem 0.5rem;
+            border-radius: 12px;
+            font-size: var(--font-size-sm);
+            font-weight: 600;
+        }
+        
+        .status-completed {
+            background: rgba(34, 139, 34, 0.1);
+            color: var(--success);
+            border: 1px solid var(--success);
+        }
+        
+        .status-progress {
+            background: rgba(255, 193, 7, 0.1);
+            color: var(--warning);
+            border: 1px solid var(--warning);
+        }
+        
+        .status-not-started {
+            background: rgba(128, 128, 128, 0.1);
+            color: var(--gray);
+            border: 1px solid var(--gray);
+        }
+        
+        .summary-stat {
+            text-align: center;
+        }
+        
+        .summary-number {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 0.25rem;
+        }
+        
+        .summary-label {
+            font-size: var(--font-size-sm);
+            color: var(--gray);
+        }
+
+        /* ユーザー管理用スタイル */
+        .admin-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+
+        .admin-table th,
+        .admin-table td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .admin-table th {
+            background: var(--light-gray);
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        .admin-table tbody tr:hover {
+            background: rgba(var(--primary-rgb), 0.05);
+        }
+
+        .user-badge {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .user-badge.admin {
+            background: var(--accent);
+            color: white;
+        }
+
+        .user-badge.user {
+            background: var(--light-gray);
+            color: var(--gray);
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: var(--light-gray);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--success);
+            transition: width 0.3s ease;
+        }
+
+        .table-container {
+            overflow-x: auto;
+        }
+
+        .user-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+        }
+
+        .stat-card {
+            background: var(--light-gray);
+            padding: 1rem;
+            border-radius: var(--border-radius);
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .stat-label {
+            font-size: 0.85rem;
+            color: var(--gray);
+        }
     </style>
+
+    <script>
+        // ユーザー管理機能
+        let allUsers = []; // 全ユーザーデータ
+        let filteredUsers = []; // フィルタ後のユーザーデータ
+
+        // ユーザー一覧読み込み
+        async function loadUserList() {
+            try {
+                const currentUser = Auth.getCurrentUser();
+                if (!currentUser || !currentUser.is_admin) {
+                    Utils.showAlert('管理者権限が必要です', 'error');
+                    return;
+                }
+
+                const response = await Utils.apiCall(`/api/admin/users?admin_id=${currentUser.id}`);
+                allUsers = response.users || [];
+                
+                // 統計更新
+                updateUserStats();
+                
+                // フィルタ適用
+                applyUserFilters();
+                
+                Utils.showAlert('ユーザー一覧を更新しました', 'success');
+            } catch (error) {
+                console.error('ユーザー一覧取得エラー:', error);
+                Utils.showAlert('ユーザー一覧の取得に失敗しました', 'error');
+            }
+        }
+
+        // ユーザー統計更新
+        function updateUserStats() {
+            const totalUsers = allUsers.length;
+            const adminUsers = allUsers.filter(u => u.is_admin).length;
+            const completedUsers = allUsers.filter(u => checkUserQuizStatus(u.id) === 'completed').length;
+            const activeUsers = totalUsers - adminUsers;
+
+            const statsHtml = `
+                <div class="stat-card">
+                    <div class="stat-number">${totalUsers}</div>
+                    <div class="stat-label">総ユーザー数</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">${activeUsers}</div>
+                    <div class="stat-label">一般ユーザー</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">${completedUsers}</div>
+                    <div class="stat-label">クイズ完了</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">${adminUsers}</div>
+                    <div class="stat-label">管理者</div>
+                </div>
+            `;
+            
+            Utils.$('#user-stats').innerHTML = statsHtml;
+        }
+
+        // フィルタ適用
+        function applyUserFilters() {
+            const searchTerm = (Utils.$('#user-search').value || '').toLowerCase();
+            const ageFilter = Utils.$('#age-filter').value;
+            
+            filteredUsers = allUsers.filter(user => {
+                const matchesSearch = !searchTerm || 
+                    user.nickname.toLowerCase().includes(searchTerm) ||
+                    user.real_name.toLowerCase().includes(searchTerm);
+                    
+                const matchesAge = !ageFilter || user.age_group === ageFilter;
+                
+                return matchesSearch && matchesAge;
+            });
+            
+            renderUserTable();
+        }
+
+        // ユーザーテーブル描画
+        function renderUserTable() {
+            const tbody = Utils.$('#users-table-body');
+            if (!tbody) return;
+            
+            if (filteredUsers.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--gray);">該当するユーザーがいません</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = filteredUsers.map(user => {
+                const ageGroupLabels = {
+                    'preschool': 'ようちえん',
+                    'elementary': '小学生', 
+                    'junior_high': '中学生',
+                    'high_school': '高校生',
+                    'adult': '大人'
+                };
+                
+                const genderLabels = {
+                    'male': '男性',
+                    'female': '女性', 
+                    'other': 'その他'
+                };
+                
+                const quizStatus = checkUserQuizStatus(user.id);
+                const progress = getQuizProgress(user.id);
+                
+                return `
+                    <tr>
+                        <td>${user.id}</td>
+                        <td><strong>${user.nickname}</strong></td>
+                        <td>${user.real_name}</td>
+                        <td>${ageGroupLabels[user.age_group] || user.age_group}</td>
+                        <td>${genderLabels[user.gender] || user.gender}</td>
+                        <td><span class="user-badge ${user.is_admin ? 'admin' : 'user'}">${user.is_admin ? '管理者' : 'ユーザー'}</span></td>
+                        <td>
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: ${progress}%"></div>
+                            </div>
+                            <small>${progress}% (${quizStatus})</small>
+                        </td>
+                        <td>
+                            ${!user.is_admin ? `
+                                <button onclick="editUser(${user.id})" class="btn btn-outline btn-small">編集</button>
+                                <button onclick="deleteUser(${user.id})" class="btn btn-outline btn-small" style="color: var(--error);">削除</button>
+                            ` : '<span style="color: var(--gray);">管理者</span>'}
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // クイズ進捗チェック（簡易版）
+        function checkUserQuizStatus(userId) {
+            // 実際の実装では別途APIを呼ぶ
+            return Math.random() > 0.5 ? 'completed' : 'in_progress';
+        }
+
+        // クイズ進捗率取得（簡易版）
+        function getQuizProgress(userId) {
+            // 実際の実装では別途APIを呼ぶ
+            return Math.floor(Math.random() * 101);
+        }
+
+        // ユーザー削除
+        async function deleteUser(userId) {
+            const user = allUsers.find(u => u.id === userId);
+            if (!user) return;
+            
+            const confirmed = confirm(`ユーザー「${user.nickname}」を削除しますか？\n\nこの操作は取り消せません。関連するすべてのデータが削除されます。`);
+            if (!confirmed) return;
+            
+            try {
+                const currentUser = Auth.getCurrentUser();
+                const response = await Utils.apiCall(`/api/admin/users/${userId}`, {
+                    method: 'DELETE',
+                    body: { admin_id: currentUser.id }
+                });
+                
+                if (response.success) {
+                    Utils.showAlert(`ユーザー「${response.deletedUser}」を削除しました`, 'success');
+                    loadUserList(); // リスト更新
+                }
+            } catch (error) {
+                console.error('ユーザー削除エラー:', error);
+                Utils.showAlert(`削除に失敗しました: ${error.message}`, 'error');
+            }
+        }
+
+        // ユーザー編集（簡易版）
+        function editUser(userId) {
+            const user = allUsers.find(u => u.id === userId);
+            if (!user) return;
+            
+            const newNickname = prompt('新しいニックネーム:', user.nickname);
+            if (!newNickname || newNickname === user.nickname) return;
+            
+            updateUserInfo(userId, { nickname: newNickname });
+        }
+
+        // ユーザー情報更新
+        async function updateUserInfo(userId, updateData) {
+            try {
+                const currentUser = Auth.getCurrentUser();
+                const response = await Utils.apiCall(`/api/admin/users/${userId}`, {
+                    method: 'PUT',
+                    body: { ...updateData, admin_id: currentUser.id }
+                });
+                
+                if (response.success) {
+                    Utils.showAlert('ユーザー情報を更新しました', 'success');
+                    loadUserList(); // リスト更新
+                }
+            } catch (error) {
+                console.error('ユーザー更新エラー:', error);
+                Utils.showAlert(`更新に失敗しました: ${error.message}`, 'error');
+            }
+        }
+
+        // 検索・フィルタイベント
+        document.addEventListener('DOMContentLoaded', () => {
+            // 検索フィールド
+            const searchInput = Utils.$('#user-search');
+            if (searchInput) {
+                searchInput.addEventListener('input', applyUserFilters);
+            }
+            
+            // 年齢フィルタ
+            const ageFilter = Utils.$('#age-filter');
+            if (ageFilter) {
+                ageFilter.addEventListener('change', applyUserFilters);
+            }
+        });
+        
+        // 初期化時にユーザー一覧も読み込み
+        const originalInitAdminPanel = initAdminPanel;
+        initAdminPanel = async function() {
+            await originalInitAdminPanel();
+            await loadUserList();
+        };
+    </script>
 </body>
 </html>

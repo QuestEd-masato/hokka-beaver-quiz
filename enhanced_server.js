@@ -24,7 +24,7 @@ const url = require('url');
 const Database = require('./database.js');
 const Utils = require('./utils.js');
 
-const PORT = 8080;
+const PORT = process.env.PORT || 8080;
 const HOST = '0.0.0.0';
 
 // === パフォーマンス最適化設定 (Phase A2) ===
@@ -109,12 +109,75 @@ const server = http.createServer(async (req, res) => {
     return;
   }
   
-  // アドミン専用ユーザー作成API
+  // アドミン専用ユーザー管理API
   if (pathname === '/api/admin/users' && req.method === 'POST') {
     const data = await getBody();
     try {
       const user = Database.createUser(data);
       Utils.sendJSON(res, { success: true, user });
+    } catch (error) {
+      Utils.sendError(res, 400, error.message);
+    }
+    return;
+  }
+  
+  // ユーザー一覧取得API
+  if (pathname === '/api/admin/users' && req.method === 'GET') {
+    const adminUser = parsedUrl.query.admin_id;
+    if (!adminUser) {
+      Utils.sendError(res, 401, '管理者認証が必要です');
+      return;
+    }
+    
+    try {
+      const users = Database.getAllUsers();
+      const adminCheck = Database.isAdmin({ id: parseInt(adminUser) });
+      if (!adminCheck) {
+        Utils.sendError(res, 403, '管理者権限が必要です');
+        return;
+      }
+      
+      Utils.sendJSON(res, { success: true, users });
+    } catch (error) {
+      Utils.sendError(res, 500, 'サーバーエラーが発生しました');
+    }
+    return;
+  }
+  
+  // ユーザー削除API
+  if (pathname.startsWith('/api/admin/users/') && req.method === 'DELETE') {
+    const userId = parseInt(pathname.split('/').pop());
+    const data = await getBody();
+    
+    if (!userId || !data.admin_id) {
+      Utils.sendError(res, 400, '必要なパラメータが不足しています');
+      return;
+    }
+    
+    try {
+      const adminUser = { id: data.admin_id };
+      const result = Database.deleteUser(userId, adminUser);
+      Utils.sendJSON(res, result);
+    } catch (error) {
+      Utils.sendError(res, 400, error.message);
+    }
+    return;
+  }
+  
+  // ユーザー情報更新API
+  if (pathname.startsWith('/api/admin/users/') && req.method === 'PUT') {
+    const userId = parseInt(pathname.split('/').pop());
+    const data = await getBody();
+    
+    if (!userId || !data.admin_id) {
+      Utils.sendError(res, 400, '必要なパラメータが不足しています');
+      return;
+    }
+    
+    try {
+      const adminUser = { id: data.admin_id };
+      const result = Database.updateUser(userId, data, adminUser);
+      Utils.sendJSON(res, result);
     } catch (error) {
       Utils.sendError(res, 400, error.message);
     }
@@ -404,6 +467,30 @@ const server = http.createServer(async (req, res) => {
     return;
   }
   
+  // 管理者問題一覧取得API
+  if (pathname === '/api/admin/questions' && req.method === 'GET') {
+    const adminUser = parsedUrl.query.admin_id;
+    if (!adminUser) {
+      Utils.sendError(res, 401, '管理者認証が必要です');
+      return;
+    }
+    
+    try {
+      const adminCheck = Database.isAdmin({ id: parseInt(adminUser) });
+      if (!adminCheck) {
+        Utils.sendError(res, 403, '管理者権限が必要です');
+        return;
+      }
+      
+      const questions = Array.from(Database.questions.values())
+        .sort((a, b) => a.question_number - b.question_number);
+      Utils.sendJSON(res, { success: true, questions });
+    } catch (error) {
+      Utils.sendError(res, 500, 'サーバーエラーが発生しました');
+    }
+    return;
+  }
+  
   // 管理者問題追加API
   if (pathname === '/api/admin/questions' && req.method === 'POST') {
     const data = await getBody();
@@ -412,6 +499,69 @@ const server = http.createServer(async (req, res) => {
       Utils.sendJSON(res, { success: true, question });
     } catch (error) {
       Utils.sendError(res, 400, error.message);
+    }
+    return;
+  }
+  
+  // 管理者問題編集API
+  if (pathname.startsWith('/api/admin/questions/') && req.method === 'PUT') {
+    const questionId = parseInt(pathname.split('/').pop());
+    const data = await getBody();
+    
+    if (!questionId || !data.admin_id) {
+      Utils.sendError(res, 400, '必要なパラメータが不足しています');
+      return;
+    }
+    
+    try {
+      const adminUser = { id: data.admin_id };
+      const result = Database.updateQuestion(questionId, data, adminUser);
+      Utils.sendJSON(res, result);
+    } catch (error) {
+      Utils.sendError(res, 400, error.message);
+    }
+    return;
+  }
+  
+  // 管理者問題削除API
+  if (pathname.startsWith('/api/admin/questions/') && req.method === 'DELETE') {
+    const questionId = parseInt(pathname.split('/').pop());
+    const data = await getBody();
+    
+    if (!questionId || !data.admin_id) {
+      Utils.sendError(res, 400, '必要なパラメータが不足しています');
+      return;
+    }
+    
+    try {
+      const adminUser = { id: data.admin_id };
+      const result = Database.deleteQuestion(questionId, adminUser);
+      Utils.sendJSON(res, result);
+    } catch (error) {
+      Utils.sendError(res, 400, error.message);
+    }
+    return;
+  }
+  
+  // 参加者詳細情報API
+  if (pathname === '/api/admin/participants' && req.method === 'GET') {
+    const adminUser = parsedUrl.query.admin_id;
+    if (!adminUser) {
+      Utils.sendError(res, 401, '管理者認証が必要です');
+      return;
+    }
+    
+    try {
+      const adminCheck = Database.isAdmin({ id: parseInt(adminUser) });
+      if (!adminCheck) {
+        Utils.sendError(res, 403, '管理者権限が必要です');
+        return;
+      }
+      
+      const participants = Database.getParticipantsWithDetails();
+      Utils.sendJSON(res, { success: true, participants });
+    } catch (error) {
+      Utils.sendError(res, 500, 'サーバーエラーが発生しました');
     }
     return;
   }
