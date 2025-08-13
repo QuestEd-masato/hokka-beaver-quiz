@@ -54,9 +54,6 @@
                         <button onclick="scrollToSection('questions-section')" class="btn btn-warning">
                             📝 問題管理
                         </button>
-                        <button onclick="scrollToSection('user-management-section')" class="btn btn-secondary">
-                            🔧 ユーザー管理
-                        </button>
                     </div>
                 </div>
                 
@@ -279,66 +276,6 @@
                     </div>
                 </div>
 
-                <!-- ユーザー管理セクション -->
-                <div class="user-management-section" id="user-management-section">
-                    <h2 style="color: var(--accent); margin: 2rem 0 1rem 0;">👥 ユーザー管理</h2>
-                    
-                    <!-- ユーザー一覧・管理 -->
-                    <div class="card slide-in" style="animation-delay: 0.3s;">
-                        <div class="card-header">
-                            <h3>👤 ユーザー一覧・管理</h3>
-                            <p style="color: var(--gray); font-size: var(--font-size-sm); margin: 0.5rem 0 0 0;">
-                                登録されたユーザーの確認、編集、削除
-                            </p>
-                        </div>
-                        <div class="card-body">
-                            <!-- 検索・フィルタ -->
-                            <div class="user-controls" style="margin-bottom: 1.5rem;">
-                                <div style="display: grid; grid-template-columns: 1fr auto auto; gap: 1rem; align-items: center;">
-                                    <input type="text" id="user-search" class="form-input" 
-                                           placeholder="🔍 ニックネームまたは本名で検索">
-                                    <select id="age-filter" class="form-input">
-                                        <option value="">全年齢層</option>
-                                        <option value="preschool">ようちえん・ほいくえん</option>
-                                        <option value="elementary">小学生</option>
-                                        <option value="junior_high">中学生</option>
-                                        <option value="high_school">高校生</option>
-                                        <option value="adult">大人</option>
-                                    </select>
-                                    <button onclick="loadUserList()" class="btn btn-primary">
-                                        🔄 更新
-                                    </button>
-                                </div>
-                            </div>
-                            
-                            <!-- ユーザー統計 -->
-                            <div id="user-stats" class="user-stats" style="margin-bottom: 1.5rem;">
-                                <!-- 統計情報がここに表示されます -->
-                            </div>
-                            
-                            <!-- ユーザー一覧テーブル -->
-                            <div class="table-container">
-                                <table class="admin-table" id="users-table">
-                                    <thead>
-                                        <tr>
-                                            <th>ID</th>
-                                            <th>ニックネーム</th>
-                                            <th>本名</th>
-                                            <th>年齢層</th>
-                                            <th>性別</th>
-                                            <th>権限</th>
-                                            <th>クイズ進捗</th>
-                                            <th>操作</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="users-table-body">
-                                        <!-- ユーザーデータがここに表示されます -->
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                </div>
 
                 <!-- 詳細管理セクション -->
                 <div class="detailed-section">
@@ -650,6 +587,9 @@
                             <button onclick="viewParticipantDetails(${participant.id})" class="btn btn-outline btn-small">
                                 👁️ 詳細
                             </button>
+                            <button onclick="deleteParticipant(${participant.id}, '${participant.nickname}')" class="btn btn-danger btn-small" style="margin-left: 0.5rem;">
+                                🗑️ 削除
+                            </button>
                         </td>
                     </tr>
                 `;
@@ -667,6 +607,52 @@
         function viewParticipantDetails(participantId) {
             // 詳細モーダル実装（今後追加可能）
             Utils.showSuccess(`参加者 ID ${participantId} の詳細機能は今後実装予定です`);
+        }
+
+        // 参加者削除
+        async function deleteParticipant(participantId, nickname) {
+            // 確認ダイアログ
+            const confirmed = confirm(`参加者「${nickname}」を削除しますか？\n\nこの操作は取り消せません。\n関連するすべてのデータ（クイズ回答、ランキング、アンケート）が削除されます。`);
+            
+            if (!confirmed) {
+                return;
+            }
+
+            // 二次確認
+            const secondConfirm = confirm(`本当に「${nickname}」を削除してよろしいですか？\n\n最終確認です。`);
+            
+            if (!secondConfirm) {
+                return;
+            }
+
+            try {
+                const currentUser = Auth.getCurrentUser();
+                if (!currentUser || !currentUser.is_admin) {
+                    Utils.showError('管理者権限が必要です');
+                    return;
+                }
+
+                // 削除APIを呼び出し
+                const response = await Utils.apiCall(`/api/admin/users/${participantId}`, {
+                    method: 'DELETE',
+                    body: { admin_id: currentUser.id }
+                });
+
+                if (response.success) {
+                    Utils.showSuccess(`参加者「${nickname}」を削除しました`);
+                    
+                    // テーブルを更新
+                    await loadParticipants();
+                    
+                    // ダッシュボード統計も更新
+                    await loadDashboardStats();
+                } else {
+                    Utils.showError(response.message || '削除に失敗しました');
+                }
+            } catch (error) {
+                console.error('参加者削除エラー:', error);
+                Utils.showError('削除中にエラーが発生しました: ' + error.message);
+            }
         }
         
         // セクションへのスクロール
