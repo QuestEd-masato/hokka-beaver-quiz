@@ -194,7 +194,7 @@
                 </div>
 
                 <!-- 参加者一覧セクション -->
-                <div class="participants-section">
+                <div class="participants-section" id="participants-section">
                     <h2 style="color: var(--secondary); margin: 2rem 0 1rem 0;">👥 参加者一覧</h2>
                     
                     <!-- 参加者詳細一覧 -->
@@ -280,7 +280,7 @@
                 </div>
 
                 <!-- ユーザー管理セクション -->
-                <div class="user-management-section">
+                <div class="user-management-section" id="user-management-section">
                     <h2 style="color: var(--accent); margin: 2rem 0 1rem 0;">👥 ユーザー管理</h2>
                     
                     <!-- ユーザー一覧・管理 -->
@@ -481,10 +481,10 @@
                 ]);
 
                 const totalUsers = users.users?.length || 0;
-                const completedQuiz = rankings.rankings?.length || 0;
+                const completedQuiz = rankings?.length || 0;
                 const avgScore = completedQuiz > 0 ? 
-                    Math.round(rankings.rankings.reduce((sum, r) => sum + r.final_score, 0) / completedQuiz) : 0;
-                const surveyCompleted = rankings.rankings?.filter(r => r.survey_bonus > 0).length || 0;
+                    Math.round(rankings.reduce((sum, r) => sum + r.score, 0) / completedQuiz) : 0;
+                const surveyCompleted = rankings?.filter(r => r.surveyBonus && r.surveyBonus > 0).length || 0;
 
                 Utils.$('#total-users').textContent = totalUsers;
                 Utils.$('#completed-quiz').textContent = completedQuiz;
