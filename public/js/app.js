@@ -30,28 +30,54 @@ const Utils = {
     return document.querySelectorAll(selector);
   },
   
-  // ローカルストレージ
+  // ローカルストレージ（スマホ対応強化）
   saveToStorage(key, data) {
-    localStorage.setItem(key, JSON.stringify(data));
+    try {
+      localStorage.setItem(key, JSON.stringify(data));
+      // 保存確認（スマホブラウザ対応）
+      const verification = localStorage.getItem(key);
+      if (!verification) {
+        console.warn(`LocalStorage保存失敗: ${key}`);
+        return false;
+      }
+      return true;
+    } catch (error) {
+      console.error(`LocalStorage保存エラー (${key}):`, error);
+      return false;
+    }
   },
   
   loadFromStorage(key) {
-    const data = localStorage.getItem(key);
-    return data ? JSON.parse(data) : null;
+    try {
+      const data = localStorage.getItem(key);
+      return data ? JSON.parse(data) : null;
+    } catch (error) {
+      console.error(`LocalStorage読み込みエラー (${key}):`, error);
+      this.removeFromStorage(key); // 破損データを削除
+      return null;
+    }
   },
   
   removeFromStorage(key) {
-    localStorage.removeItem(key);
+    try {
+      localStorage.removeItem(key);
+    } catch (error) {
+      console.error(`LocalStorage削除エラー (${key}):`, error);
+    }
   },
   
-  // API通信
+  // API通信（スマホキャッシュ対策）
   async apiCall(url, options = {}) {
     try {
       const response = await fetch(url, {
         headers: {
           'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0',
           ...options.headers
         },
+        cache: 'no-store', // スマホブラウザのキャッシュ無効化
         ...options
       });
       
@@ -138,10 +164,24 @@ const Auth = {
       });
       
       if (result.success) {
-        AppState.currentUser = result.user;
-        Utils.saveToStorage('currentUser', result.user);
-        Utils.saveToStorage('auth_token', Date.now()); // 認証トークン代替
-        return result.user;
+        // ユーザーデータの整合性確認
+        if (result.user && result.user.id && result.user.nickname) {
+          AppState.currentUser = result.user;
+          Utils.saveToStorage('currentUser', result.user);
+          Utils.saveToStorage('auth_token', Date.now()); // 認証トークン代替
+          
+          // スマホ対応: LocalStorage保存確認
+          const saved = Utils.loadFromStorage('currentUser');
+          if (saved && saved.id === result.user.id) {
+            console.log('ログイン成功 - データ保存確認済み:', result.user.nickname);
+          } else {
+            console.warn('LocalStorage保存に問題があります');
+          }
+          
+          return result.user;
+        } else {
+          throw new Error('サーバーからの応答データが不正です');
+        }
       } else {
         throw new Error(result.error || 'ログインに失敗しました');
       }
@@ -171,14 +211,20 @@ const Auth = {
     const savedUser = Utils.loadFromStorage('currentUser');
     const authToken = Utils.loadFromStorage('auth_token');
     
-    if (savedUser && authToken && savedUser.id) {
-      AppState.currentUser = savedUser;
-      return true;
-    } else {
-      // 不整合データのクリア
-      this.clearAuthData();
-      return false;
+    // より厳密な検証（スマホ対応）
+    if (savedUser && authToken && savedUser.id && savedUser.nickname) {
+      // データ整合性確認
+      if (typeof savedUser.id === 'number' && savedUser.nickname.length > 0) {
+        AppState.currentUser = savedUser;
+        console.log('認証復元成功:', savedUser.nickname, 'ID:', savedUser.id);
+        return true;
+      }
     }
+    
+    // 不整合データのクリア（詳細ログ付き）
+    console.log('認証データ不整合 - savedUser:', savedUser, 'authToken:', authToken);
+    this.clearAuthData();
+    return false;
   },
   
   // 現在のユーザー取得（シンプル化）
@@ -790,9 +836,15 @@ const Survey = {
   }
 };
 
-// === イベントリスナー設定（シンプル化） ===
+// === イベントリスナー設定（スマホ対応強化） ===
 document.addEventListener('DOMContentLoaded', async () => {
   console.log('DOMContentLoaded - app.js');
+  
+  // スマホ対応: 認証状態の詳細ログ
+  console.log('LocalStorage状況確認:');
+  console.log('- currentUser:', Utils.loadFromStorage('currentUser'));
+  console.log('- auth_token:', Utils.loadFromStorage('auth_token'));
+  console.log('- AppState.currentUser:', AppState.currentUser);
   
   const path = window.location.pathname;
   console.log('現在のパス:', path);

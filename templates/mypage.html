@@ -233,14 +233,20 @@
             checkLogin();
         });
 
-        // ログイン確認（シンプル化）
+        // ログイン確認（スマホ対応強化）
         function checkLogin() {
-            if (!Auth.isAuthenticated()) {
-                // 未認証の場合はトップページへリダイレクト（リロード時に直接アクセス可能）
+            console.log('マイページ認証チェック開始');
+            console.log('Auth.isAuthenticated():', Auth.isAuthenticated());
+            console.log('AppState.currentUser:', AppState.currentUser);
+            
+            if (!Auth.isAuthenticated() || !AppState.currentUser) {
+                console.log('認証失敗 - トップページへリダイレクト');
+                // 未認証の場合はトップページへリダイレクト
                 window.location.href = '/?redirect=' + encodeURIComponent(window.location.pathname);
                 return;
             }
 
+            console.log('認証成功 - ユーザーデータ読み込み開始');
             // ログイン済みの場合は通常通り表示
             document.getElementById('login-required').style.display = 'none';
             document.getElementById('mypage-main').style.display = 'block';
