@@ -645,7 +645,7 @@ const Database = {
    */
   async getAllUsers() {
     try {
-      const users = Array.from(this.users.values());
+      const users = await MySQLHelper.getAllUsers();
       logger.debug(`取得ユーザー数: ${users.length}`);
       return users;
     } catch (error) {
@@ -660,7 +660,7 @@ const Database = {
   async isAdmin(user) {
     try {
       if (user && user.id) {
-        const userData = this.users.get(user.id);
+        const userData = await MySQLHelper.getUserById(user.id);
         if (userData && userData.is_admin) {
           return { ...userData, password_hash: undefined };
         }

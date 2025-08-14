@@ -1,0 +1,303 @@
+{
+  "users": [
+    [
+      1,
+      {
+        "id": 1,
+        "nickname": "admin",
+        "real_name": "システム管理者",
+        "age_group": "adult",
+        "gender": "other",
+        "password_hash": "240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9",
+        "is_admin": true,
+        "created_at": "2025-08-13T14:47:27.815Z"
+      }
+    ],
+    [
+      2,
+      {
+        "id": 2,
+        "nickname": "test",
+        "real_name": "テストユーザー",
+        "age_group": "elementary",
+        "gender": "other",
+        "password_hash": "ecd71870d1963316a97e3ac3408c9835ad8cf0f3c1bc703527c30265534f75ae",
+        "is_admin": false,
+        "created_at": "2025-08-13T14:47:27.815Z"
+      }
+    ],
+    [
+      3,
+      {
+        "id": 3,
+        "nickname": "aaa",
+        "real_name": "テストユーザー2",
+        "age_group": "junior_high",
+        "gender": "other",
+        "password_hash": "f64561e04c3be9cea6271afcd2b324f4b8654ed1b011f4f15ff4436e0100d5a0",
+        "is_admin": false,
+        "created_at": "2025-08-13T14:47:27.815Z"
+      }
+    ]
+  ],
+  "questions": [
+    [
+      1,
+      {
+        "id": 1,
+        "question_number": 1,
+        "question_text": "北陸製菓の会社ができたのはいつでしょうか？",
+        "choice_a": "大正7年（1918年）",
+        "choice_b": "昭和25年（1950年）",
+        "choice_c": "昭和40年（1965年）",
+        "choice_d": "昭和45年（1970年）",
+        "correct_answer": "A",
+        "explanation": "北陸製菓は大正7年（1918年）に創業しました。100年以上もの長い歴史を持つ老舗のお菓子会社で、長年にわたってみんなに愛される美味しいお菓子を作り続けています。"
+      }
+    ],
+    [
+      2,
+      {
+        "id": 2,
+        "question_number": 2,
+        "question_text": "北陸製菓が一番大切にしていることで正しいのはどれでしょうか？",
+        "choice_a": "安い商品をたくさん作る",
+        "choice_b": "お客様に喜んでもらえる商品作り",
+        "choice_c": "新しい商品だけを作る",
+        "choice_d": "機械だけで作る",
+        "correct_answer": "B",
+        "explanation": "北陸製菓は「お客様に喜んでもらえる商品作り」を一番大切にしています。美味しくて安全なお菓子を作って、みんなが笑顔になれるように心を込めて作っています。"
+      }
+    ],
+    [
+      3,
+      {
+        "id": 3,
+        "question_number": 3,
+        "question_text": "北陸製菓の「ビーバー」というお菓子の特徴はどれでしょうか？",
+        "choice_a": "チョコレート味だけ",
+        "choice_b": "固くて食べにくい",
+        "choice_c": "サクサクした食感",
+        "choice_d": "冷たいお菓子",
+        "correct_answer": "C",
+        "explanation": "ビーバーはサクサクした軽い食感が特徴のお菓子です。北陸製菓の技術と工夫により、誰でも食べやすく美味しいお菓子として多くの人に愛されています。"
+      }
+    ],
+    [
+      4,
+      {
+        "id": 4,
+        "question_number": 4,
+        "question_text": "北陸製菓が商品を作るときに一番気をつけていることは何でしょうか？",
+        "choice_a": "早く作ること",
+        "choice_b": "安全で美味しいこと",
+        "choice_c": "見た目だけきれいにすること",
+        "choice_d": "安い材料を使うこと",
+        "correct_answer": "B",
+        "explanation": "北陸製菓では「安全で美味しいこと」を一番大切にしています。みんなが安心して食べられるように、きちんと確認して美味しいお菓子を作っています。"
+      }
+    ],
+    [
+      5,
+      {
+        "id": 5,
+        "question_number": 5,
+        "question_text": "北陸製菓の工場では、どのような工夫をしているでしょうか？",
+        "choice_a": "機械だけで作っている",
+        "choice_b": "衛生管理を徹底している",
+        "choice_c": "外で作っている",
+        "choice_d": "一人だけで作っている",
+        "correct_answer": "B",
+        "explanation": "北陸製菓の工場ではとてもきれいにしています。清潔で安全なお菓子を作るために、働く人みんなで協力して美味しいお菓子作りをしています。"
+      }
+    ],
+    [
+      6,
+      {
+        "id": 6,
+        "question_number": 6,
+        "question_text": "北陸製菓が地域のために行っている活動はどれでしょうか？",
+        "choice_a": "地元の材料を使う",
+        "choice_b": "工場見学を受け入れる",
+        "choice_c": "地域のイベントに参加する",
+        "choice_d": "上記すべて",
+        "correct_answer": "D",
+        "explanation": "北陸製菓は地域との繋がりを大切にしています。地元の材料を使ったり、工場見学を受け入れたり、地域のイベントに参加するなど、地域の皆さんと一緒に成長することを大切にしています。"
+      }
+    ],
+    [
+      7,
+      {
+        "id": 7,
+        "question_number": 7,
+        "question_text": "北陸製菓の商品づくりで大切にしている「伝統」とは何でしょうか？",
+        "choice_a": "昔からの美味しい作り方",
+        "choice_b": "古い機械だけを使う",
+        "choice_c": "同じ味だけを作る",
+        "choice_d": "昔の包装紙を使う",
+        "correct_answer": "A",
+        "explanation": "北陸製菓では昔から受け継がれた美味しい作り方を大切にしています。新しい技術も取り入れながら、伝統的な美味しさを守り続けています。"
+      }
+    ],
+    [
+      8,
+      {
+        "id": 8,
+        "question_number": 8,
+        "question_text": "北陸製菓が環境のためにしていることで正しいのはどれでしょうか？",
+        "choice_a": "包装材料の工夫",
+        "choice_b": "エネルギーの節約",
+        "choice_c": "ゴミを減らす工夫",
+        "choice_d": "上記すべて",
+        "correct_answer": "D",
+        "explanation": "北陸製菓は地球環境を大切にしています。包装材料を工夫したり、エネルギーを節約したり、ゴミを減らしたりして、美味しいお菓子作りと環境保護の両方を大切にしています。"
+      }
+    ],
+    [
+      9,
+      {
+        "id": 9,
+        "question_number": 9,
+        "question_text": "北陸製菓が新しい商品を作るときに一番大切にしていることは何でしょうか？",
+        "choice_a": "流行に合わせる",
+        "choice_b": "お客様の声を聞く",
+        "choice_c": "値段を安くする",
+        "choice_d": "見た目をかっこよくする",
+        "correct_answer": "B",
+        "explanation": "北陸製菓ではお客様の声をとても大切にしています。どんなお菓子が欲しいか、どうしたらもっと美味しくなるかを聞いて、みんなに喜んでもらえる商品作りをしています。"
+      }
+    ],
+    [
+      10,
+      {
+        "id": 10,
+        "question_number": 10,
+        "question_text": "北陸製菓の「これからの目標」で正しいのはどれでしょうか？",
+        "choice_a": "もっとたくさんの人に美味しいお菓子を届ける",
+        "choice_b": "安全で安心なお菓子作りを続ける",
+        "choice_c": "地域の皆さんと一緒に成長する",
+        "choice_d": "上記すべて",
+        "correct_answer": "D",
+        "explanation": "北陸製菓はこれからも、もっとたくさんの人に美味しいお菓子を届けたり、安全で安心なお菓子作りを続けたり、地域の皆さんと一緒に成長していくことを目標にしています。"
+      }
+    ]
+  ],
+  "userAnswers": [
+    [
+      "2_1",
+      {
+        "userId": 2,
+        "questionId": 1,
+        "answer": "A",
+        "isCorrect": true,
+        "answeredAt": "2025-08-13T14:47:27.815Z"
+      }
+    ],
+    [
+      "2_2",
+      {
+        "userId": 2,
+        "questionId": 2,
+        "answer": "B",
+        "isCorrect": true,
+        "answeredAt": "2025-08-13T14:47:27.815Z"
+      }
+    ],
+    [
+      "2_3",
+      {
+        "userId": 2,
+        "questionId": 3,
+        "answer": "A",
+        "isCorrect": false,
+        "answeredAt": "2025-08-13T14:47:27.815Z"
+      }
+    ],
+    [
+      "2_4",
+      {
+        "userId": 2,
+        "questionId": 4,
+        "answer": "C",
+        "isCorrect": false,
+        "answeredAt": "2025-08-13T14:47:27.815Z"
+      }
+    ],
+    [
+      "2_5",
+      {
+        "userId": 2,
+        "questionId": 5,
+        "answer": "B",
+        "isCorrect": true,
+        "answeredAt": "2025-08-13T14:47:27.815Z"
+      }
+    ],
+    [
+      "2_6",
+      {
+        "userId": 2,
+        "questionId": 6,
+        "answer": "A",
+        "isCorrect": false,
+        "answeredAt": "2025-08-13T14:47:27.815Z"
+      }
+    ],
+    [
+      "2_7",
+      {
+        "userId": 2,
+        "questionId": 7,
+        "answer": "C",
+        "isCorrect": false,
+        "answeredAt": "2025-08-13T14:47:27.815Z"
+      }
+    ],
+    [
+      "2_8",
+      {
+        "userId": 2,
+        "questionId": 8,
+        "answer": "B",
+        "isCorrect": false,
+        "answeredAt": "2025-08-13T14:47:27.815Z"
+      }
+    ],
+    [
+      "2_9",
+      {
+        "userId": 2,
+        "questionId": 9,
+        "answer": "C",
+        "isCorrect": false,
+        "answeredAt": "2025-08-13T14:47:27.815Z"
+      }
+    ],
+    [
+      "2_10",
+      {
+        "userId": 2,
+        "questionId": 10,
+        "answer": "A",
+        "isCorrect": false,
+        "answeredAt": "2025-08-13T14:47:27.815Z"
+      }
+    ]
+  ],
+  "quizSessions": [],
+  "rankings": [],
+  "surveyAnswers": [],
+  "quizCompletions": [
+    [
+      2,
+      {
+        "userId": 2,
+        "score": 30,
+        "correctCount": 3,
+        "totalQuestions": 10,
+        "completedAt": "2025-08-13T14:47:27.815Z"
+      }
+    ]
+  ],
+  "timestamp": "2025-08-13T14:47:27.815Z"
+}
