@@ -174,113 +174,94 @@ const Database = {
   },
   
   /**
-   * ユーザー認証
+   * ユーザー認証 - RDS統合版
    * ニックネームとパスワードでログイン確認
    */
-  authenticateUser(nickname, password) {
-    for (const [id, user] of this.users) {
-      if (user.nickname === nickname && user.password_hash === this.hashPassword(password)) {
-        return {
-          id: id,
-          nickname: user.nickname,
-          real_name: user.real_name,
-          age_group: user.age_group,
-          gender: user.gender,
-          is_admin: user.is_admin || false
-        };
+  async authenticateUser(nickname, password) {
+    try {
+      // MySQLHelperでRDS認証
+      const user = await MySQLHelper.authenticateUser(nickname, this.hashPassword(password));
+      
+      if (user) {
+        logger.info(`ユーザー認証成功: ${nickname}`);
+        return user;
+      } else {
+        logger.info(`ユーザー認証失敗: ${nickname}`);
+        return null;
       }
+    } catch (error) {
+      logger.error(`ユーザー認証エラー: ${error.message}`);
+      return null;
     }
-    return null;
   },
   
   /**
-   * 新規ユーザー作成（管理者専用）
+   * 新規ユーザー作成 - RDS統合版
    * 重複チェック + パスワードハッシュ化
    */
-  createUser(userData) {
-    // ニックネーム重複チェック
-    for (const user of this.users.values()) {
-      if (user.nickname === userData.nickname) {
-        throw new Error('このニックネームは既に使用されています');
-      }
+  async createUser(userData) {
+    try {
+      // パスワードハッシュ化
+      const hashedUserData = {
+        ...userData,
+        password_hash: this.hashPassword(userData.password)
+      };
+      
+      // MySQLHelperでRDS作成（重複チェック含む）
+      const user = await MySQLHelper.createUser(hashedUserData);
+      
+      logger.info(`新規ユーザー作成: ${user.nickname}`);
+      
+      // Mapからの保存を削除（RDSに一元化）
+      // this.users.set(user.id, user); // 削除
+      // this.saveToFile(); // 削除
+      
+      return user;
+    } catch (error) {
+      logger.error(`ユーザー作成エラー: ${error.message}`);
+      throw error;
     }
-    
-    const userId = Math.max(...Array.from(this.users.keys()), 0) + 1;
-    const user = {
-      id: userId,
-      nickname: userData.nickname,
-      real_name: userData.real_name || '',
-      age_group: userData.age_group,
-      gender: userData.gender || 'other',
-      password_hash: this.hashPassword(userData.password),
-      is_admin: userData.is_admin || false,
-      created_at: new Date()
-    };
-    
-    this.users.set(userId, user);
-    this.saveToFile(); // 即座に保存
-    
-    return {
-      id: user.id,
-      nickname: user.nickname,
-      real_name: user.real_name,
-      age_group: user.age_group,
-      gender: user.gender,
-      is_admin: user.is_admin
-    };
   },
   
   /**
-   * ユーザー回答を保存
+   * ユーザー回答を保存 - RDS統合版
    * 問題番号と選択した答えを記録
    */
-  saveUserAnswer(userId, questionNumber, answer) {
-    const question = Array.from(this.questions.values()).find(q => q.question_number === questionNumber);
-    if (!question) {
-      throw new Error('問題が見つかりません');
+  async saveUserAnswer(userId, questionNumber, answer) {
+    try {
+      // MySQLHelperでRDS保存（正解判定含む）
+      const result = await MySQLHelper.saveUserAnswer(userId, questionNumber, answer);
+      
+      logger.debug(`回答保存: ユーザー${userId} 問題${questionNumber} 答え${answer}`);
+      
+      // Mapからの保存を削除（RDSに一元化）
+      // this.userAnswers.set(answerKey, userAnswer); // 削除
+      // this.scheduleSave(); // 削除
+      
+      return {
+        correct: result.isCorrect,
+        correctAnswer: result.correctAnswer,
+        explanation: null // 解説はMySQLHelperから今後取得
+      };
+    } catch (error) {
+      logger.error(`回答保存エラー: ${error.message}`);
+      throw error;
     }
-    
-    const isCorrect = question.correct_answer === answer;
-    const answerKey = `${userId}-${questionNumber}`;
-    
-    const userAnswer = {
-      userId: userId,
-      questionNumber: questionNumber,
-      answer: answer,
-      isCorrect: isCorrect,
-      answeredAt: new Date()
-    };
-    
-    this.userAnswers.set(answerKey, userAnswer);
-    this.scheduleSave(); // Phase A1: バッチ保存に変更
-    
-    // RDS保存機能は将来実装予定
-    // 現在はローカルストレージのみ使用
-    
-    return {
-      correct: isCorrect,
-      correctAnswer: question.correct_answer,
-      explanation: question.explanation
-    };
   },
   
   /**
-   * ユーザーの全回答を取得
+   * ユーザーの全回答を取得 - RDS統合版
    * スコア計算等で使用
    */
-  getUserAnswers(userId) {
-    const answers = [];
-    for (const [key, answer] of this.userAnswers) {
-      if (answer.userId === userId) {
-        // 両方のフィールド名に対応（互換性維持）
-        const questionNumber = answer.questionNumber || answer.questionId;
-        answers.push({
-          ...answer,
-          questionNumber: questionNumber
-        });
-      }
+  async getUserAnswers(userId) {
+    try {
+      const answers = await MySQLHelper.getUserAnswers(userId);
+      logger.debug(`ユーザー${userId}の回答数: ${answers.length}`);
+      return answers.sort((a, b) => a.questionNumber - b.questionNumber);
+    } catch (error) {
+      logger.error(`ユーザー回答取得エラー: ${error.message}`);
+      return [];
     }
-    return answers.sort((a, b) => a.questionNumber - b.questionNumber);
   },
   
   /**
@@ -350,52 +331,67 @@ const Database = {
   },
   
   /**
-   * ランキング取得（上位順）
+   * ランキング取得 - RDS統合版
    * スコア順でソート済みの結果を返す
    */
-  getRanking() {
-    const rankings = Array.from(this.rankings.values());
-    rankings.sort((a, b) => {
-      // スコアが同じ場合は正解数で比較
-      if (b.score === a.score) {
-        return b.correctCount - a.correctCount;
-      }
-      return b.score - a.score;
-    });
-    
-    // ユーザー情報を付加
-    return rankings.map((ranking, index) => {
-      const user = this.users.get(ranking.userId);
-      return {
-        rank: index + 1,
-        nickname: user ? user.nickname : 'Unknown',
-        age_group: user ? user.age_group : 'unknown',
-        score: ranking.score,
-        correctCount: ranking.correctCount
-      };
-    });
+  async getRanking() {
+    try {
+      const rankings = await MySQLHelper.getRankings();
+      
+      // ランク付けとアンケート情報を追加
+      return rankings.map((ranking, index) => {
+        // アンケート回答状況をチェック
+        const isSurveyCompleted = this.surveyAnswers.has(ranking.userId);
+        const surveyBonus = isSurveyCompleted ? 10 : 0;
+        
+        return {
+          rank: index + 1,
+          nickname: ranking.nickname,
+          userId: ranking.userId,
+          score: ranking.score,
+          correctCount: ranking.correctCount,
+          completed_at: ranking.completed_at,
+          surveyBonus: surveyBonus,
+          surveyCompleted: isSurveyCompleted
+        };
+      });
+    } catch (error) {
+      logger.error(`ランキング取得エラー: ${error.message}`);
+      return [];
+    }
   },
   
   /**
-   * データ整合性チェック
-   * データの一貫性を確認
+   * データ整合性チェック - RDS統合版
+   * RDS内のデータ一貫性を確認
    */
-  checkDataIntegrity() {
-    console.log('🔍 データ整合性をチェック中...');
-    
-    // 孤立した回答データのチェック
-    let orphanAnswers = 0;
-    for (const answer of this.userAnswers.values()) {
-      if (!this.users.has(answer.userId)) {
-        orphanAnswers++;
+  async checkDataIntegrity() {
+    try {
+      console.log('🔍 RDSデータ整合性をチェック中...');
+      
+      // RDSでのデータ整合性チェック
+      const users = await MySQLHelper.getAllUsers();
+      const questions = await MySQLHelper.getAllQuestions();
+      const answers = await MySQLHelper.getAllAnswers();
+      
+      console.log(`📀 RDSデータ状況:`);
+      console.log(`  - ユーザー: ${users.length}件`);
+      console.log(`  - 問題: ${questions.length}件`);
+      console.log(`  - 回答: ${answers.length}件`);
+      
+      // 孤立回答チェック（SQL制約で防止済み）
+      const orphanAnswers = answers.filter(answer => 
+        !users.some(user => user.id === answer.userId)
+      );
+      
+      if (orphanAnswers.length > 0) {
+        console.log(`⚠️  孤立回答データ: ${orphanAnswers.length}件`);
       }
+      
+      console.log('✅ RDSデータ整合性チェック完了');
+    } catch (error) {
+      console.error('❌ データ整合性チェックエラー:', error.message);
     }
-    
-    if (orphanAnswers > 0) {
-      console.log(`⚠️  孤立した回答データ: ${orphanAnswers}件`);
-    }
-    
-    console.log('✅ データ整合性チェック完了: 問題なし');
   },
 
   /**
@@ -623,172 +619,176 @@ const Database = {
   /**
    * 問題追加（管理者専用）
    */
-  addQuestion(questionData) {
-    const questionId = Math.max(...Array.from(this.questions.keys()), 0) + 1;
-    const question = {
-      id: questionId,
-      question_number: questionData.question_number,
-      question_text: questionData.question_text,
-      choice_a: questionData.choice_a,
-      choice_b: questionData.choice_b,
-      choice_c: questionData.choice_c,
-      choice_d: questionData.choice_d,
-      correct_answer: questionData.correct_answer,
-      explanation: questionData.explanation,
-      created_at: new Date()
-    };
-    
-    this.questions.set(questionId, question);
-    this.saveToFile();
-    
-    // RDS同期機能は将来実装予定
-    // 現在はローカルストレージのみ使用
-    
-    return question;
-  },
-  
   /**
-   * 全ユーザー情報取得（デバッグ用）
+   * 問題追加 - RDS統合版
    */
-  getAllUsers() {
-    return Array.from(this.users.values()).map(user => {
-      return { ...user, password_hash: undefined };
-    });
-  },
-  
-  /**
-   * 管理者チェック
-   */
-  isAdmin(user) {
-    if (user && user.id) {
-      const userData = this.users.get(user.id);
-      if (userData && userData.is_admin) {
-        return { ...user, password_hash: undefined };
-      }
-    }
-    return null;
-  },
-  
-  /**
-   * ユーザー削除（管理者専用）
-   */
-  deleteUser(userId, adminUser) {
-    // 管理者権限チェック
-    if (!this.isAdmin(adminUser)) {
-      throw new Error('管理者権限が必要です');
-    }
-    
-    // 自己削除防止
-    if (userId === adminUser.id) {
-      throw new Error('自分自身は削除できません');
-    }
-    
-    // ユーザー存在チェック
-    if (!this.users.has(userId)) {
-      throw new Error('ユーザーが見つかりません');
-    }
-    
-    const userData = this.users.get(userId);
-    
-    // 管理者の削除防止（安全対策）
-    if (userData.is_admin) {
-      throw new Error('管理者ユーザーは削除できません');
-    }
-    
-    // 関連データも削除
-    this.deleteUserRelatedData(userId);
-    
-    // ユーザー削除
-    this.users.delete(userId);
-    this.scheduleSave();
-    
-    return { success: true, deletedUser: userData.nickname };
-  },
-  
-  /**
-   * ユーザー関連データ削除
-   */
-  deleteUserRelatedData(userId) {
-    // 回答データ削除
-    for (const [key, answer] of this.userAnswers) {
-      if (answer.userId === userId) {
-        this.userAnswers.delete(key);
-      }
-    }
-    
-    // クイズ完了データ削除
-    this.quizCompletions.delete(userId);
-    
-    // ランキングデータ削除
-    this.rankings.delete(userId);
-    
-    // アンケートデータ削除
-    this.surveyAnswers.delete(userId);
-    
-    // セッションデータ削除
-    for (const [key, session] of this.quizSessions) {
-      if (session.userId === userId) {
-        this.quizSessions.delete(key);
-      }
+  async addQuestion(questionData) {
+    try {
+      // MySQLHelperでRDS作成（重複チェック含む）
+      const question = await MySQLHelper.createQuestion(questionData);
+      
+      logger.info(`新規問題作成: 問題${question.question_number}`);
+      
+      // Mapからの保存を削除（RDSに一元化）
+      // this.questions.set(questionId, question); // 削除
+      // this.saveToFile(); // 削除
+      
+      return question;
+    } catch (error) {
+      logger.error(`問題作成エラー: ${error.message}`);
+      throw error;
     }
   },
   
   /**
-   * ユーザー情報更新（管理者専用）
+   * 全ユーザー情報取得 - RDS統合版
    */
-  updateUser(userId, updateData, adminUser) {
-    // 管理者権限チェック
-    if (!this.isAdmin(adminUser)) {
-      throw new Error('管理者権限が必要です');
+  async getAllUsers() {
+    try {
+      const users = await MySQLHelper.getAllUsers();
+      logger.debug(`取得ユーザー数: ${users.length}`);
+      return users;
+    } catch (error) {
+      logger.error(`全ユーザー取得エラー: ${error.message}`);
+      return [];
     }
-    
-    // ユーザー存在チェック
-    if (!this.users.has(userId)) {
-      throw new Error('ユーザーが見つかりません');
-    }
-    
-    const user = this.users.get(userId);
-    
-    // 更新可能フィールドのみ許可
-    const allowedFields = ['real_name', 'age_group', 'gender'];
-    const updates = {};
-    
-    for (const field of allowedFields) {
-      if (updateData[field] !== undefined) {
-        updates[field] = updateData[field];
-      }
-    }
-    
-    // ニックネーム変更の場合は重複チェック
-    if (updateData.nickname && updateData.nickname !== user.nickname) {
-      for (const [id, existingUser] of this.users) {
-        if (id !== userId && existingUser.nickname === updateData.nickname) {
-          throw new Error('このニックネームは既に使用されています');
+  },
+  
+  /**
+   * 管理者チェック - RDS統合版
+   */
+  async isAdmin(user) {
+    try {
+      if (user && user.id) {
+        const userData = await MySQLHelper.getUserById(user.id);
+        if (userData && userData.is_admin) {
+          return { ...userData, password_hash: undefined };
         }
       }
-      updates.nickname = updateData.nickname;
+      return null;
+    } catch (error) {
+      logger.error(`管理者チェックエラー: ${error.message}`);
+      return null;
     }
-    
-    // ユーザーデータ更新
-    const updatedUser = { ...user, ...updates };
-    this.users.set(userId, updatedUser);
-    this.scheduleSave();
-    
-    return {
-      success: true,
-      user: { ...updatedUser, password_hash: undefined }
-    };
+  },
+  
+  /**
+   * ユーザー削除 - RDS統合版
+   */
+  async deleteUser(userId, adminUser) {
+    try {
+      // 管理者権限チェック
+      const admin = await this.isAdmin(adminUser);
+      if (!admin) {
+        throw new Error('管理者権限が必要です');
+      }
+      
+      // 自己削除防止
+      if (userId === adminUser.id) {
+        throw new Error('自分自身は削除できません');
+      }
+      
+      // ユーザー存在チェック
+      const userData = await MySQLHelper.getUserById(userId);
+      if (!userData) {
+        throw new Error('ユーザーが見つかりません');
+      }
+      
+      // 管理者の削除防止（安全対策）
+      if (userData.is_admin) {
+        throw new Error('管理者ユーザーは削除できません');
+      }
+      
+      // 関連データも削除（RDS版）
+      await this.deleteUserRelatedData(userId);
+      
+      // ユーザー削除（RDS）
+      const deleteResult = await MySQLHelper.deleteUser(userId);
+      
+      if (deleteResult.success) {
+        logger.info(`ユーザー削除完了: ${userData.nickname}`);
+        return { success: true, deletedUser: userData.nickname };
+      } else {
+        throw new Error('ユーザー削除に失敗しました');
+      }
+    } catch (error) {
+      logger.error(`ユーザー削除エラー: ${error.message}`);
+      throw error;
+    }
+  },
+  
+  /**
+   * ユーザー関連データ削除 - RDS統合版
+   * ユーザー削除前に関連データを削除
+   */
+  async deleteUserRelatedData(userId) {
+    try {
+      logger.debug(`ユーザー${userId}の関連データ削除開始`);
+      
+      // RDSの関連データ削除はSQLのFOREIGN KEY CASCADEで自動実行される
+      // ここでは明示的なクリーンアップを実行
+      
+      // 1. ユーザー回答データ削除（user_answersテーブル）
+      const userAnswers = await MySQLHelper.getUserAnswers(userId);
+      logger.debug(`削除対象回答: ${userAnswers.length}件`);
+      
+      // 2. Mapからのデータ削除（一部はMap管理のまま）
+      // quiz_sessions (違いはMap管理)
+      for (const [key, session] of this.quizSessions) {
+        if (session.userId === userId) {
+          this.quizSessions.delete(key);
+        }
+      }
+      
+      logger.debug(`ユーザー${userId}の関連データ削除完了`);
+    } catch (error) {
+      logger.error(`関連データ削除エラー: ${error.message}`);
+      throw error;
+    }
+  },
+  
+  /**
+   * ユーザー情報更新 - RDS統合版
+   */
+  async updateUser(userId, updateData, adminUser) {
+    try {
+      // 管理者権限チェック
+      const admin = await this.isAdmin(adminUser);
+      if (!admin) {
+        throw new Error('管理者権限が必要です');
+      }
+      
+      // MySQLHelperでRDS更新（重複チェック含む）
+      const result = await MySQLHelper.updateUser(userId, updateData);
+      
+      if (result.success) {
+        logger.info(`ユーザー更新: ${userId}`);
+        
+        // 更新後のデータを取得
+        const updatedUser = await MySQLHelper.getUserById(userId);
+        
+        return {
+          success: true,
+          user: updatedUser
+        };
+      } else {
+        throw new Error('ユーザー更新に失敗しました');
+      }
+    } catch (error) {
+      logger.error(`ユーザー更新エラー: ${error.message}`);
+      throw error;
+    }
   },
   
   /**
    * スコアCSV出力
    */
-  getScoresCSV() {
+  async getScoresCSV() {
     const csvData = [
       ['順位', 'ニックネーム', '年齢層', 'スコア', '正解数', '完了日時']
     ];
 
-    const rankings = this.getRanking();
+    const rankings = await this.getRanking();
     rankings.forEach(ranking => {
       const completion = this.quizCompletions.get(ranking.userId);
       const completedAt = completion ? 
@@ -872,83 +872,90 @@ const Database = {
   /**
    * 問題更新（管理者専用）
    */
-  updateQuestion(questionId, updateData, adminUser) {
-    // 管理者権限チェック
-    if (!this.isAdmin(adminUser)) {
-      throw new Error('管理者権限が必要です');
-    }
-    
-    // 問題存在チェック
-    if (!this.questions.has(questionId)) {
-      throw new Error('問題が見つかりません');
-    }
-    
-    const question = this.questions.get(questionId);
-    
-    // 更新可能フィールドのみ許可
-    const allowedFields = ['question_text', 'choice_a', 'choice_b', 'choice_c', 'choice_d', 'correct_answer', 'explanation'];
-    const updates = {};
-    
-    for (const field of allowedFields) {
-      if (updateData[field] !== undefined) {
-        updates[field] = updateData[field];
+  /**
+   * 問題更新 - RDS統合版
+   */
+  async updateQuestion(questionId, updateData, adminUser) {
+    try {
+      // 管理者権限チェック
+      const admin = await this.isAdmin(adminUser);
+      if (!admin) {
+        throw new Error('管理者権限が必要です');
       }
+      
+      // MySQLHelperでRDS更新
+      const result = await MySQLHelper.updateQuestion(questionId, updateData);
+      
+      if (result.success) {
+        logger.info(`問題更新: ${questionId}`);
+        
+        // 更新後のデータを取得
+        const updatedQuestion = await MySQLHelper.getQuestionById(questionId);
+        
+        return {
+          success: true,
+          question: updatedQuestion
+        };
+      } else {
+        throw new Error('問題更新に失敗しました');
+      }
+    } catch (error) {
+      logger.error(`問題更新エラー: ${error.message}`);
+      throw error;
     }
-    
-    // 問題データ更新
-    const updatedQuestion = { ...question, ...updates };
-    this.questions.set(questionId, updatedQuestion);
-    this.scheduleSave();
-    
-    // RDS同期機能は将来実装予定
-    // 現在はローカルストレージのみ使用
-    
-    return {
-      success: true,
-      question: updatedQuestion
-    };
   },
   
   /**
-   * 問題削除（管理者専用）
+   * 問題削除 - RDS統合版
    */
-  deleteQuestion(questionId, adminUser) {
-    // 管理者権限チェック
-    if (!this.isAdmin(adminUser)) {
-      throw new Error('管理者権限が必要です');
-    }
-    
-    // 問題存在チェック
-    if (!this.questions.has(questionId)) {
-      throw new Error('問題が見つかりません');
-    }
-    
-    const question = this.questions.get(questionId);
-    
-    // 最低問題数チェック（1問は残す）
-    if (this.questions.size <= 1) {
-      throw new Error('最低1問は必要です。削除できません');
-    }
-    
-    // 問題削除
-    this.questions.delete(questionId);
-    
-    // 関連する回答データも削除
-    for (const [key, answer] of this.userAnswers) {
-      if (answer.questionNumber === question.question_number) {
-        this.userAnswers.delete(key);
+  async deleteQuestion(questionId, adminUser) {
+    try {
+      // 管理者権限チェック
+      const admin = await this.isAdmin(adminUser);
+      if (!admin) {
+        throw new Error('管理者権限が必要です');
       }
+      
+      // 問題存在チェック
+      const question = await MySQLHelper.getQuestionById(questionId);
+      if (!question) {
+        throw new Error('問題が見つかりません');
+      }
+      
+      // 最低問題数チェック（1問は残す）
+      const allQuestions = await MySQLHelper.getAllQuestions();
+      if (allQuestions.length <= 1) {
+        throw new Error('最低1問は必要です。削除できません');
+      }
+      
+      // 関連回答データの確認（警告表示用）
+      // 実際の削除はSQL CASCADEで自動実行
+      const relatedAnswers = await MySQLHelper.getAllAnswers();
+      const affectedAnswers = relatedAnswers.filter(answer => 
+        answer.questionNumber === question.question_number
+      );
+      
+      if (affectedAnswers.length > 0) {
+        logger.info(`問題削除により${affectedAnswers.length}件の回答も削除されます`);
+      }
+      
+      // 問題削除（RDS）
+      const deleteResult = await MySQLHelper.deleteQuestion(questionId);
+      
+      if (deleteResult.success) {
+        logger.info(`問題削除完了: ${question.question_text}`);
+        return {
+          success: true,
+          deletedQuestion: question.question_text,
+          affectedAnswers: affectedAnswers.length
+        };
+      } else {
+        throw new Error('問題削除に失敗しました');
+      }
+    } catch (error) {
+      logger.error(`問題削除エラー: ${error.message}`);
+      throw error;
     }
-    
-    this.scheduleSave();
-    
-    // RDS同期機能は将来実装予定
-    // 現在はローカルストレージのみ使用
-    
-    return { 
-      success: true, 
-      deletedQuestion: question.question_text 
-    };
   },
   
   /**

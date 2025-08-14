@@ -378,7 +378,8 @@
 
         // 管理者アクセス確認
         function checkAdminAccess() {
-            if (!Auth.isAuthenticated() || !AppState.currentUser?.is_admin) {
+            const currentUser = Auth.getCurrentUser();
+            if (!Auth.isAuthenticated() || !currentUser?.is_admin) {
                 document.getElementById('admin-check').style.display = 'block';
                 document.getElementById('admin-main').style.display = 'none';
                 return;
@@ -393,7 +394,7 @@
 
         // 管理パネル初期化
         async function initAdminPanel() {
-            const user = AppState.currentUser;
+            const user = Auth.getCurrentUser();
             if (user) {
                 Utils.$('#admin-nickname').textContent = user.nickname;
             }
@@ -421,7 +422,8 @@
                 const completedQuiz = rankings?.length || 0;
                 const avgScore = completedQuiz > 0 ? 
                     Math.round(rankings.reduce((sum, r) => sum + r.score, 0) / completedQuiz) : 0;
-                const surveyCompleted = rankings?.filter(r => r.surveyBonus && r.surveyBonus > 0).length || 0;
+                // 修正: surveyCompletedフィールドを使用
+                const surveyCompleted = rankings?.filter(r => r.surveyCompleted === true).length || 0;
 
                 Utils.$('#total-users').textContent = totalUsers;
                 Utils.$('#completed-quiz').textContent = completedQuiz;
@@ -468,7 +470,7 @@
         // 問題一覧読み込み
         async function loadQuestionsList() {
             try {
-                const result = await Utils.apiCall(`/api/admin/questions?admin_id=${AppState.currentUser.id}`);
+                const result = await Utils.apiCall(`/api/admin/questions?admin_id=${Auth.getCurrentUser().id}`);
                 const questions = result.questions || []; // 管理者用APIは{success:true, questions:[]}形式
                 const container = Utils.$('#questions-list');
 
@@ -499,7 +501,7 @@
         // 参加者一覧読み込み
         async function loadParticipants() {
             try {
-                const result = await Utils.apiCall(`/api/admin/participants?admin_id=${AppState.currentUser.id}`);
+                const result = await Utils.apiCall(`/api/admin/participants?admin_id=${Auth.getCurrentUser().id}`);
                 const participants = result.participants || [];
                 
                 // 統計更新
@@ -957,7 +959,7 @@
         // 問題編集を保存
         async function saveQuestionEdit(questionId) {
             const updatedData = {
-                admin_id: AppState.currentUser.id,
+                admin_id: Auth.getCurrentUser().id,
                 question_text: document.getElementById('edit-question-text').value,
                 choice_a: document.getElementById('edit-choice-a').value,
                 choice_b: document.getElementById('edit-choice-b').value,
@@ -991,7 +993,7 @@
                 const result = await Utils.apiCall(`/api/admin/questions/${questionId}`, {
                     method: 'DELETE',
                     body: JSON.stringify({
-                        admin_id: AppState.currentUser.id
+                        admin_id: Auth.getCurrentUser().id
                     })
                 });
 

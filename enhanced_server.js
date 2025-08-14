@@ -450,8 +450,12 @@ const server = http.createServer(async (req, res) => {
 
   // ランキングAPI
   if (pathname === '/api/ranking') {
-    const ranking = Database.getRanking();
-    Utils.sendJSON(res, ranking);
+    try {
+      const ranking = await Database.getRanking();
+      Utils.sendJSON(res, ranking);
+    } catch (error) {
+      Utils.sendError(res, 500, 'ランキング取得エラー');
+    }
     return;
   }
   
