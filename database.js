@@ -201,22 +201,35 @@ const Database = {
    */
   async createUser(userData) {
     try {
+      // 重複チェック（Memory Map）
+      for (let user of this.users.values()) {
+        if (user.nickname === userData.nickname) {
+          throw new Error('ニックネームが既に使用されています');
+        }
+      }
+      
+      // 新しいIDを生成
+      const newId = Math.max(0, ...Array.from(this.users.keys())) + 1;
+      
       // パスワードハッシュ化
-      const hashedUserData = {
-        ...userData,
-        password_hash: this.hashPassword(userData.password)
+      const user = {
+        id: newId,
+        nickname: userData.nickname,
+        real_name: userData.real_name || '',
+        age_group: userData.age_group,
+        gender: userData.gender || 'other',
+        password_hash: this.hashPassword(userData.password),
+        is_admin: userData.is_admin || false,
+        created_at: new Date()
       };
       
-      // MySQLHelperでRDS作成（重複チェック含む）
-      const user = await MySQLHelper.createUser(hashedUserData);
+      // Memory Mapに保存
+      this.users.set(newId, user);
+      this.scheduleSave();
       
       logger.info(`新規ユーザー作成: ${user.nickname}`);
       
-      // Mapからの保存を削除（RDSに一元化）
-      // this.users.set(user.id, user); // 削除
-      // this.saveToFile(); // 削除
-      
-      return user;
+      return { ...user, password_hash: undefined }; // パスワードハッシュは返さない
     } catch (error) {
       logger.error(`ユーザー作成エラー: ${error.message}`);
       throw error;
@@ -229,20 +242,33 @@ const Database = {
    */
   async saveUserAnswer(userId, questionNumber, answer) {
     try {
-      // MySQLHelperでRDS保存（正解判定含む）
-      const result = await MySQLHelper.saveUserAnswer(userId, questionNumber, answer);
+      // Memory Mapで正解判定
+      const question = this.questions.get(questionNumber);
+      if (!question) {
+        throw new Error('問題が見つかりません');
+      }
       
-      logger.debug(`回答保存: ユーザー${userId} 問題${questionNumber} 答え${answer}`);
+      const isCorrect = question.correct_answer === answer;
+      const answerKey = `${userId}_${questionNumber}`;
       
-      // Mapからの保存を削除（RDSに一元化）
-      // this.userAnswers.set(answerKey, userAnswer); // 削除
-      // this.scheduleSave(); // 削除
-      
-      return {
-        correct: result.isCorrect,
-        correctAnswer: result.correctAnswer,
-        explanation: null // 解説はMySQLHelperから今後取得
+      // Memory Mapに保存
+      const userAnswer = {
+        userId: userId,
+        questionNumber: questionNumber,
+        answer: answer,
+        isCorrect: isCorrect,
+        answeredAt: new Date(),
+        correct: isCorrect,
+        correctAnswer: question.correct_answer,
+        explanation: question.explanation
       };
+      
+      this.userAnswers.set(answerKey, userAnswer);
+      this.scheduleSave();
+      
+      logger.debug(`回答保存: ユーザー${userId} 問題${questionNumber} 答え${answer} ${isCorrect ? '正解' : '不正解'}`);
+      
+      return userAnswer;
     } catch (error) {
       logger.error(`回答保存エラー: ${error.message}`);
       throw error;
@@ -255,7 +281,13 @@ const Database = {
    */
   async getUserAnswers(userId) {
     try {
-      const answers = await MySQLHelper.getUserAnswers(userId);
+      // Memory Mapから取得
+      const answers = [];
+      for (let [key, answer] of this.userAnswers.entries()) {
+        if (answer.userId === userId) {
+          answers.push(answer);
+        }
+      }
       logger.debug(`ユーザー${userId}の回答数: ${answers.length}`);
       return answers.sort((a, b) => a.questionNumber - b.questionNumber);
     } catch (error) {
@@ -269,14 +301,14 @@ const Database = {
    * 最終スコア計算とランキング更新
    */
   async completeQuiz(userId, additionalData = {}) {
-    const answers = this.getUserAnswers(userId);
+    const answers = await this.getUserAnswers(userId);
     const correctCount = answers.filter(a => a.isCorrect).length;
     const totalQuestions = this.questions.size;
     const baseScore = (correctCount / totalQuestions) * 100;
     
-    // アンケート完了確認（ボーナスポイント判定）
-    const surveyStatus = await MySQLHelper.getSurveyStatus(userId);
-    const bonusPoints = surveyStatus.completed ? 10 : 0;
+    // アンケート完了確認（ボーナスポイント判定）Memory Map使用
+    const surveyCompleted = this.surveyAnswers.has(userId);
+    const bonusPoints = surveyCompleted ? 10 : 0;
     const finalScore = baseScore + bonusPoints;
     
     // クイズ完了をマーク（メモリ）
@@ -291,13 +323,10 @@ const Database = {
       ...additionalData
     });
     
-    // MySQLに保存
-    await MySQLHelper.saveQuizCompletion(userId, finalScore, correctCount);
-    
-    // ランキング更新（メモリ + MySQL）
+    // ランキング更新（Memory Map）
     const user = this.users.get(userId);
     const nickname = user ? user.nickname : 'Unknown';
-    await this.updateRanking(userId, finalScore, correctCount, nickname, surveyStatus.completed);
+    await this.updateRanking(userId, finalScore, correctCount, nickname, surveyCompleted);
     
     this.scheduleSave(); // Phase A1: バッチ保存に変更
     
@@ -316,18 +345,15 @@ const Database = {
    * スコア順でランキングを管理
    */
   async updateRanking(userId, score, correctCount, nickname = null, hasBonus = false) {
-    // メモリに保存
+    // Memory Mapに保存
     this.rankings.set(userId, {
       userId: userId,
+      nickname: nickname || 'Unknown',
       score: score,
       correctCount: correctCount,
+      completed_at: new Date(),
       updatedAt: new Date()
     });
-    
-    // MySQLに保存（ボーナス込み）
-    if (nickname) {
-      await MySQLHelper.saveRanking(userId, nickname, score, correctCount, false);
-    }
   },
   
   /**
@@ -336,7 +362,13 @@ const Database = {
    */
   async getRanking() {
     try {
-      const rankings = await MySQLHelper.getRankings();
+      // Memory Mapから取得してソート
+      const rankings = Array.from(this.rankings.values())
+        .sort((a, b) => {
+          // スコア降順、同スコアなら完了日時昇順
+          if (b.score !== a.score) return b.score - a.score;
+          return new Date(a.completed_at) - new Date(b.completed_at);
+        });
       
       // ランク付けとアンケート情報を追加
       return rankings.map((ranking, index) => {
