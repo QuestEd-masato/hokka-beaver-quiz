@@ -130,8 +130,8 @@ const server = http.createServer(async (req, res) => {
     }
     
     try {
-      const users = Database.getAllUsers();
-      const adminCheck = Database.isAdmin({ id: parseInt(adminUser) });
+      const users = await Database.getAllUsers();
+      const adminCheck = await Database.isAdmin({ id: parseInt(adminUser) });
       if (!adminCheck) {
         Utils.sendError(res, 403, '管理者権限が必要です');
         return;
@@ -461,7 +461,7 @@ const server = http.createServer(async (req, res) => {
   
   // デバッグAPI（ユーザー一覧）
   if (pathname === '/api/debug/users') {
-    const users = Database.getAllUsers();
+    const users = await Database.getAllUsers();
     Utils.sendJSON(res, {
       users: users,
       totalUsers: users.length,
