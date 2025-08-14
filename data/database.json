@@ -187,10 +187,13 @@
       "2_1",
       {
         "userId": 2,
-        "questionId": 1,
-        "answer": "A",
-        "isCorrect": true,
-        "answeredAt": "2025-08-13T14:47:27.815Z"
+        "questionNumber": 1,
+        "answer": "B",
+        "isCorrect": false,
+        "answeredAt": "2025-08-14T09:14:11.207Z",
+        "correct": false,
+        "correctAnswer": "A",
+        "explanation": "北陸製菓は大正7年（1918年）に創業しました。100年以上もの長い歴史を持つ老舗のお菓子会社で、長年にわたってみんなに愛される美味しいお菓子を作り続けています。"
       }
     ],
     [
@@ -285,19 +288,33 @@
     ]
   ],
   "quizSessions": [],
-  "rankings": [],
+  "rankings": [
+    [
+      2,
+      {
+        "userId": 2,
+        "nickname": "test",
+        "score": 20,
+        "correctCount": 2,
+        "completed_at": "2025-08-14T09:14:11.208Z",
+        "updatedAt": "2025-08-14T09:14:11.208Z"
+      }
+    ]
+  ],
   "surveyAnswers": [],
   "quizCompletions": [
     [
       2,
       {
         "userId": 2,
-        "score": 30,
-        "correctCount": 3,
-        "totalQuestions": 10,
-        "completedAt": "2025-08-13T14:47:27.815Z"
+        "completedAt": "2025-08-14T09:14:11.208Z",
+        "score": 20,
+        "baseScore": 20,
+        "bonusPoints": 0,
+        "correctCount": 2,
+        "totalQuestions": 10
       }
     ]
   ],
-  "timestamp": "2025-08-13T14:47:27.815Z"
+  "timestamp": "2025-08-14T10:35:28.710Z"
 }

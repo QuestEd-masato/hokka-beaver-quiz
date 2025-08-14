@@ -292,15 +292,23 @@ const server = http.createServer(async (req, res) => {
   if (pathname === '/api/survey/submit' && req.method === 'POST') {
     const data = await getBody();
     try {
-      // Memory Mapでアンケート保存（重複チェック込み）
-      const result = await Database.saveSurveyAnswer(data.userId, data.feedback);
+      const MySQLHelper = require('./mysql-helper');
+      
+      // MySQLでアンケート保存（重複チェック込み）
+      const result = await MySQLHelper.saveSurveyAnswer(data.userId, data.feedback);
       
       if (!result.success) {
         Utils.sendError(res, 400, result.message);
         return;
       }
       
-      // 既にMemory Mapに保存済み
+      // メモリにも保存（後方互換性）
+      Database.surveyAnswers.set(data.userId, {
+        userId: data.userId,
+        feedback: data.feedback || '',
+        submittedAt: new Date()
+      });
+      Database.saveToFile();
       
       // クイズ完了済みの場合、ランキングを再計算してボーナス反映
       if (Database.quizCompletions.has(data.userId)) {
@@ -375,8 +383,10 @@ const server = http.createServer(async (req, res) => {
     }
     
     try {
-      // Memory Mapから状態取得
-      const status = await Database.getSurveyStatus(userId);
+      const MySQLHelper = require('./mysql-helper');
+      
+      // MySQLから状態取得
+      const status = await MySQLHelper.getSurveyStatus(userId);
       
       Utils.sendJSON(res, {
         completed: status.completed,

@@ -14,7 +14,7 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
-// const MySQLHelper = require('./mysql-helper'); // RDS統一完了により削除
+const MySQLHelper = require('./mysql-helper');
 
 // === パフォーマンス最適化設定 (Phase A2) ===
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
@@ -399,19 +399,19 @@ const Database = {
    */
   async checkDataIntegrity() {
     try {
-      console.log('🔍 Memory Mapデータ整合性をチェック中...');
+      console.log('🔍 RDSデータ整合性をチェック中...');
       
-      // Memory Mapでのデータ整合性チェック
-      const users = Array.from(this.users.values());
-      const questions = Array.from(this.questions.values());
-      const answers = Array.from(this.userAnswers.values());
+      // RDSでのデータ整合性チェック
+      const users = await MySQLHelper.getAllUsers();
+      const questions = await MySQLHelper.getAllQuestions();
+      const answers = await MySQLHelper.getAllAnswers();
       
-      console.log(`💾 Memory Mapデータ状況:`);
+      console.log(`📀 RDSデータ状況:`);
       console.log(`  - ユーザー: ${users.length}件`);
       console.log(`  - 問題: ${questions.length}件`);
       console.log(`  - 回答: ${answers.length}件`);
       
-      // 孤立回答チェック
+      // 孤立回答チェック（SQL制約で防止済み）
       const orphanAnswers = answers.filter(answer => 
         !users.some(user => user.id === answer.userId)
       );
@@ -420,7 +420,7 @@ const Database = {
         console.log(`⚠️  孤立回答データ: ${orphanAnswers.length}件`);
       }
       
-      console.log('✅ Memory Mapデータ整合性チェック完了');
+      console.log('✅ RDSデータ整合性チェック完了');
     } catch (error) {
       console.error('❌ データ整合性チェックエラー:', error.message);
     }
@@ -652,39 +652,18 @@ const Database = {
    * 問題追加（管理者専用）
    */
   /**
-   * 問題追加 - Memory Map統一版
+   * 問題追加 - RDS統合版
    */
   async addQuestion(questionData) {
     try {
-      // 新しい問題IDを生成
-      const existingIds = Array.from(this.questions.keys());
-      const newId = existingIds.length > 0 ? Math.max(...existingIds) + 1 : 1;
-      
-      // 問題番号を設定（未指定の場合）
-      if (!questionData.question_number) {
-        const existingNumbers = Array.from(this.questions.values())
-          .map(q => q.question_number)
-          .filter(n => n);
-        questionData.question_number = existingNumbers.length > 0 ? Math.max(...existingNumbers) + 1 : 1;
-      }
-      
-      const question = {
-        id: newId,
-        question_number: questionData.question_number,
-        question_text: questionData.question_text,
-        choice_a: questionData.choice_a,
-        choice_b: questionData.choice_b,
-        choice_c: questionData.choice_c,
-        choice_d: questionData.choice_d,
-        correct_answer: questionData.correct_answer,
-        explanation: questionData.explanation || ''
-      };
-      
-      // Memory Mapに追加
-      this.questions.set(newId, question);
-      this.scheduleSave();
+      // MySQLHelperでRDS作成（重複チェック含む）
+      const question = await MySQLHelper.createQuestion(questionData);
       
       logger.info(`新規問題作成: 問題${question.question_number}`);
+      
+      // Mapからの保存を削除（RDSに一元化）
+      // this.questions.set(questionId, question); // 削除
+      // this.saveToFile(); // 削除
       
       return question;
     } catch (error) {
@@ -742,7 +721,7 @@ const Database = {
       }
       
       // ユーザー存在チェック
-      const userData = this.users.get(userId);
+      const userData = await MySQLHelper.getUserById(userId);
       if (!userData) {
         throw new Error('ユーザーが見つかりません');
       }
@@ -752,15 +731,18 @@ const Database = {
         throw new Error('管理者ユーザーは削除できません');
       }
       
-      // 関連データも削除（Memory Map版）
-      this.deleteUserRelatedDataFromMemory(userId);
+      // 関連データも削除（RDS版）
+      await this.deleteUserRelatedData(userId);
       
-      // ユーザー削除（Memory Map）
-      this.users.delete(userId);
-      this.scheduleSave();
+      // ユーザー削除（RDS）
+      const deleteResult = await MySQLHelper.deleteUser(userId);
       
-      logger.info(`ユーザー削除完了: ${userData.nickname}`);
-      return { success: true, deletedUser: userData.nickname };
+      if (deleteResult.success) {
+        logger.info(`ユーザー削除完了: ${userData.nickname}`);
+        return { success: true, deletedUser: userData.nickname };
+      } else {
+        throw new Error('ユーザー削除に失敗しました');
+      }
     } catch (error) {
       logger.error(`ユーザー削除エラー: ${error.message}`);
       throw error;
@@ -768,39 +750,27 @@ const Database = {
   },
   
   /**
-   * ユーザー関連データ削除 - Memory Map統一版
+   * ユーザー関連データ削除 - RDS統合版
    * ユーザー削除前に関連データを削除
    */
-  deleteUserRelatedDataFromMemory(userId) {
+  async deleteUserRelatedData(userId) {
     try {
       logger.debug(`ユーザー${userId}の関連データ削除開始`);
       
-      // 1. ユーザー回答データ削除
-      const userAnswerKeys = Array.from(this.userAnswers.keys())
-        .filter(key => key.startsWith(`${userId}_`));
+      // RDSの関連データ削除はSQLのFOREIGN KEY CASCADEで自動実行される
+      // ここでは明示的なクリーンアップを実行
       
-      userAnswerKeys.forEach(key => {
-        this.userAnswers.delete(key);
-      });
+      // 1. ユーザー回答データ削除（user_answersテーブル）
+      const userAnswers = await MySQLHelper.getUserAnswers(userId);
+      logger.debug(`削除対象回答: ${userAnswers.length}件`);
       
-      logger.debug(`削除済み回答: ${userAnswerKeys.length}件`);
-      
-      // 2. その他の関連データ削除
-      // クイズセッション削除
+      // 2. Mapからのデータ削除（一部はMap管理のまま）
+      // quiz_sessions (違いはMap管理)
       for (const [key, session] of this.quizSessions) {
         if (session.userId === userId) {
           this.quizSessions.delete(key);
         }
       }
-      
-      // ランキング削除
-      this.rankings.delete(userId);
-      
-      // クイズ完了記録削除
-      this.quizCompletions.delete(userId);
-      
-      // アンケート回答削除
-      this.surveyAnswers.delete(userId);
       
       logger.debug(`ユーザー${userId}の関連データ削除完了`);
     } catch (error) {
@@ -810,7 +780,7 @@ const Database = {
   },
   
   /**
-   * ユーザー情報更新 - Memory Map統一版
+   * ユーザー情報更新 - RDS統合版
    */
   async updateUser(userId, updateData, adminUser) {
     try {
@@ -820,34 +790,22 @@ const Database = {
         throw new Error('管理者権限が必要です');
       }
       
-      // ユーザー存在チェック
-      const user = this.users.get(userId);
-      if (!user) {
-        throw new Error('ユーザーが見つかりません');
+      // MySQLHelperでRDS更新（重複チェック含む）
+      const result = await MySQLHelper.updateUser(userId, updateData);
+      
+      if (result.success) {
+        logger.info(`ユーザー更新: ${userId}`);
+        
+        // 更新後のデータを取得
+        const updatedUser = await MySQLHelper.getUserById(userId);
+        
+        return {
+          success: true,
+          user: updatedUser
+        };
+      } else {
+        throw new Error('ユーザー更新に失敗しました');
       }
-      
-      // Memory Mapで更新
-      const updatedUser = {
-        ...user,
-        ...updateData,
-        id: userId  // IDは不変
-      };
-      
-      // パスワード更新の場合はハッシュ化
-      if (updateData.password) {
-        updatedUser.password_hash = this.hashPassword(updateData.password);
-        delete updatedUser.password;  // 平文パスワードを削除
-      }
-      
-      this.users.set(userId, updatedUser);
-      this.scheduleSave();
-      
-      logger.info(`ユーザー更新: ${userId}`);
-      
-      return {
-        success: true,
-        user: { ...updatedUser, password_hash: undefined }  // パスワードハッシュを除外
-      };
     } catch (error) {
       logger.error(`ユーザー更新エラー: ${error.message}`);
       throw error;
@@ -947,7 +905,7 @@ const Database = {
    * 問題更新（管理者専用）
    */
   /**
-   * 問題更新 - Memory Map統一版
+   * 問題更新 - RDS統合版
    */
   async updateQuestion(questionId, updateData, adminUser) {
     try {
@@ -957,28 +915,22 @@ const Database = {
         throw new Error('管理者権限が必要です');
       }
       
-      // 問題存在チェック
-      const question = this.questions.get(questionId);
-      if (!question) {
-        throw new Error('問題が見つかりません');
+      // MySQLHelperでRDS更新
+      const result = await MySQLHelper.updateQuestion(questionId, updateData);
+      
+      if (result.success) {
+        logger.info(`問題更新: ${questionId}`);
+        
+        // 更新後のデータを取得
+        const updatedQuestion = await MySQLHelper.getQuestionById(questionId);
+        
+        return {
+          success: true,
+          question: updatedQuestion
+        };
+      } else {
+        throw new Error('問題更新に失敗しました');
       }
-      
-      // Memory Mapで更新
-      const updatedQuestion = {
-        ...question,
-        ...updateData,
-        id: questionId  // IDは不変
-      };
-      
-      this.questions.set(questionId, updatedQuestion);
-      this.scheduleSave();
-      
-      logger.info(`問題更新: ${questionId}`);
-      
-      return {
-        success: true,
-        question: updatedQuestion
-      };
     } catch (error) {
       logger.error(`問題更新エラー: ${error.message}`);
       throw error;
@@ -986,7 +938,7 @@ const Database = {
   },
   
   /**
-   * 問題削除 - Memory Map統一版
+   * 問題削除 - RDS統合版
    */
   async deleteQuestion(questionId, adminUser) {
     try {
@@ -997,101 +949,44 @@ const Database = {
       }
       
       // 問題存在チェック
-      const question = this.questions.get(questionId);
+      const question = await MySQLHelper.getQuestionById(questionId);
       if (!question) {
         throw new Error('問題が見つかりません');
       }
       
       // 最低問題数チェック（1問は残す）
-      if (this.questions.size <= 1) {
+      const allQuestions = await MySQLHelper.getAllQuestions();
+      if (allQuestions.length <= 1) {
         throw new Error('最低1問は必要です。削除できません');
       }
       
       // 関連回答データの確認（警告表示用）
-      const relatedAnswers = Array.from(this.userAnswers.values());
+      // 実際の削除はSQL CASCADEで自動実行
+      const relatedAnswers = await MySQLHelper.getAllAnswers();
       const affectedAnswers = relatedAnswers.filter(answer => 
         answer.questionNumber === question.question_number
       );
       
       if (affectedAnswers.length > 0) {
         logger.info(`問題削除により${affectedAnswers.length}件の回答も削除されます`);
-        
-        // 関連回答を削除
-        affectedAnswers.forEach(answer => {
-          const answerKey = `${answer.userId}_${answer.questionNumber}`;
-          this.userAnswers.delete(answerKey);
-        });
       }
       
-      // 問題削除（Memory Map）
-      this.questions.delete(questionId);
-      this.scheduleSave();
+      // 問題削除（RDS）
+      const deleteResult = await MySQLHelper.deleteQuestion(questionId);
       
-      logger.info(`問題削除完了: ${question.question_text}`);
-      return {
-        success: true,
-        deletedQuestion: question.question_text,
-        affectedAnswers: affectedAnswers.length
-      };
+      if (deleteResult.success) {
+        logger.info(`問題削除完了: ${question.question_text}`);
+        return {
+          success: true,
+          deletedQuestion: question.question_text,
+          affectedAnswers: affectedAnswers.length
+        };
+      } else {
+        throw new Error('問題削除に失敗しました');
+      }
     } catch (error) {
       logger.error(`問題削除エラー: ${error.message}`);
       throw error;
-    }
-  },
-  
-  /**
-   * アンケート保存 - Memory Map統一版
-   */
-  async saveSurveyAnswer(userId, feedback) {
-    try {
-      // 既存チェック
-      if (this.surveyAnswers.has(userId)) {
-        return {
-          success: false,
-          message: '既にアンケートを提出済みです'
-        };
-      }
-      
-      // Memory Mapに保存
-      this.surveyAnswers.set(userId, {
-        userId: userId,
-        feedback: feedback || '',
-        submittedAt: new Date()
-      });
-      this.scheduleSave();
-      
-      logger.info(`アンケート保存: ユーザー${userId}`);
-      
-      return {
-        success: true,
-        message: 'アンケートを保存しました'
-      };
-    } catch (error) {
-      logger.error(`アンケート保存エラー: ${error.message}`);
-      return {
-        success: false,
-        message: 'アンケート保存に失敗しました'
-      };
-    }
-  },
-  
-  /**
-   * アンケート状況取得 - Memory Map統一版
-   */
-  async getSurveyStatus(userId) {
-    try {
-      const surveyAnswer = this.surveyAnswers.get(userId);
-      
-      return {
-        completed: !!surveyAnswer,
-        submittedAt: surveyAnswer ? surveyAnswer.submittedAt : null
-      };
-    } catch (error) {
-      logger.error(`アンケート状況取得エラー: ${error.message}`);
-      return {
-        completed: false,
-        submittedAt: null
-      };
     }
   },
   
