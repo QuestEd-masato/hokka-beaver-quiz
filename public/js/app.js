@@ -840,7 +840,11 @@ async function initHomePage() {
     
     try {
       await Auth.login({ nickname, password });
-      return; // 成功時は Auth.login内でリダイレクトされる
+      // ログイン成功後、マイページへリダイレクト
+      console.log('ログイン成功:', nickname);
+      // showSuccessはDOM要素が必要なので、直接リダイレクト
+      window.location.href = '/mypage';
+      return;
     } catch (error) {
       console.error('URLパラメータログインエラー:', error);
       window.location.href = '/?error=login_failed';
