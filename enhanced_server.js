@@ -113,7 +113,7 @@ const server = http.createServer(async (req, res) => {
   if (pathname === '/api/admin/users' && req.method === 'POST') {
     const data = await getBody();
     try {
-      const user = Database.createUser(data);
+      const user = await Database.createUser(data);
       Utils.sendJSON(res, { success: true, user });
     } catch (error) {
       Utils.sendError(res, 400, error.message);
@@ -156,7 +156,7 @@ const server = http.createServer(async (req, res) => {
     
     try {
       const adminUser = { id: data.admin_id };
-      const result = Database.deleteUser(userId, adminUser);
+      const result = await Database.deleteUser(userId, adminUser);
       Utils.sendJSON(res, result);
     } catch (error) {
       Utils.sendError(res, 400, error.message);
@@ -176,7 +176,7 @@ const server = http.createServer(async (req, res) => {
     
     try {
       const adminUser = { id: data.admin_id };
-      const result = Database.updateUser(userId, data, adminUser);
+      const result = await Database.updateUser(userId, data, adminUser);
       Utils.sendJSON(res, result);
     } catch (error) {
       Utils.sendError(res, 400, error.message);
@@ -188,7 +188,7 @@ const server = http.createServer(async (req, res) => {
   if (pathname === '/api/auth/login' && req.method === 'POST') {
     const data = await getBody();
     try {
-      const user = Database.authenticateUser(data.nickname, data.password);
+      const user = await Database.authenticateUser(data.nickname, data.password);
       if (user) {
         Utils.sendJSON(res, { success: true, user });
       } else {
@@ -211,7 +211,7 @@ const server = http.createServer(async (req, res) => {
   if (pathname === '/api/quiz/save-answer' && req.method === 'POST') {
     const data = await getBody();
     try {
-      const userAnswer = Database.saveUserAnswer(data.userId, data.questionNumber, data.answer);
+      const userAnswer = await Database.saveUserAnswer(data.userId, data.questionNumber, data.answer);
       Utils.sendJSON(res, { success: true, ...userAnswer });
     } catch (error) {
       Utils.sendError(res, 400, error.message);
@@ -223,10 +223,10 @@ const server = http.createServer(async (req, res) => {
   if (pathname === '/api/quiz/answer' && req.method === 'POST') {
     const data = await getBody();
     try {
-      const userAnswer = Database.saveUserAnswer(data.userId, data.questionNumber, data.answer);
+      const userAnswer = await Database.saveUserAnswer(data.userId, data.questionNumber, data.answer);
       
       // 現在の回答状況を取得
-      const answers = Database.getUserAnswers(data.userId);
+      const answers = await Database.getUserAnswers(data.userId);
       const totalQuestions = Database.questions.size;
       const progress = {
         completed: answers.length,
@@ -257,7 +257,7 @@ const server = http.createServer(async (req, res) => {
     try {
       // まず完了済みかチェック
       const isCompleted = Database.quizCompletions.has(data.userId);
-      const answers = Database.getUserAnswers(data.userId);
+      const answers = await Database.getUserAnswers(data.userId);
       
       if (isCompleted) {
         // 既に完了している場合は既存の結果を返す
@@ -279,7 +279,7 @@ const server = http.createServer(async (req, res) => {
       }
       
       // クイズ完了処理
-      const result = Database.completeQuiz(data.userId, {});
+      const result = await Database.completeQuiz(data.userId, {});
       
       Utils.sendJSON(res, { success: true, ...result });
     } catch (error) {
@@ -348,7 +348,7 @@ const server = http.createServer(async (req, res) => {
     
     try {
       const isCompleted = Database.quizCompletions.has(userId);
-      const answers = Database.getUserAnswers(userId);
+      const answers = await Database.getUserAnswers(userId);
       const totalQuestions = Database.questions.size;
       
       // 完了済みの場合、スコア情報も含める
@@ -409,7 +409,7 @@ const server = http.createServer(async (req, res) => {
     
     try {
       // ユーザーの回答データを取得
-      const userAnswers = Database.getUserAnswers(userId);
+      const userAnswers = await Database.getUserAnswers(userId);
       
       // 全問題データを取得
       const questions = Array.from(Database.questions.values())
@@ -480,7 +480,7 @@ const server = http.createServer(async (req, res) => {
     }
     
     try {
-      const adminCheck = Database.isAdmin({ id: parseInt(adminUser) });
+      const adminCheck = await Database.isAdmin({ id: parseInt(adminUser) });
       if (!adminCheck) {
         Utils.sendError(res, 403, '管理者権限が必要です');
         return;
@@ -556,7 +556,7 @@ const server = http.createServer(async (req, res) => {
     }
     
     try {
-      const adminCheck = Database.isAdmin({ id: parseInt(adminUser) });
+      const adminCheck = await Database.isAdmin({ id: parseInt(adminUser) });
       if (!adminCheck) {
         Utils.sendError(res, 403, '管理者権限が必要です');
         return;
