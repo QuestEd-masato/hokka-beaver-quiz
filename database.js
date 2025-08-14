@@ -179,16 +179,16 @@ const Database = {
    */
   async authenticateUser(nickname, password) {
     try {
-      // MySQLHelperでRDS認証
-      const user = await MySQLHelper.authenticateUser(nickname, this.hashPassword(password));
-      
-      if (user) {
-        logger.info(`ユーザー認証成功: ${nickname}`);
-        return user;
-      } else {
-        logger.info(`ユーザー認証失敗: ${nickname}`);
-        return null;
+      // Memory Mapで認証
+      for (let user of this.users.values()) {
+        if (user.nickname === nickname && user.password_hash === this.hashPassword(password)) {
+          logger.info(`ユーザー認証成功: ${nickname}`);
+          return { ...user, password_hash: undefined }; // パスワードハッシュは返さない
+        }
       }
+      
+      logger.info(`ユーザー認証失敗: ${nickname}`);
+      return null;
     } catch (error) {
       logger.error(`ユーザー認証エラー: ${error.message}`);
       return null;
