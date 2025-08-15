@@ -1098,14 +1098,14 @@ const Database = {
   /**
    * 参加者詳細情報取得（管理者専用）
    */
-  getParticipantsWithDetails() {
+  async getParticipantsWithDetails() {
     const participants = [];
     
     for (const [userId, user] of this.users) {
       if (user.is_admin) continue; // 管理者は除外
       
       // ユーザーの回答数と正解数を計算
-      const userAnswers = this.getUserAnswers(userId);
+      const userAnswers = await this.getUserAnswers(userId);
       const correctCount = userAnswers.filter(a => a.isCorrect).length;
       
       // クイズ完了状況

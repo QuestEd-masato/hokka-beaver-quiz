@@ -552,7 +552,7 @@ const server = http.createServer(async (req, res) => {
         return;
       }
       
-      const participants = Database.getParticipantsWithDetails();
+      const participants = await Database.getParticipantsWithDetails();
       Utils.sendJSON(res, { success: true, participants });
     } catch (error) {
       Utils.sendError(res, 500, 'サーバーエラーが発生しました');
