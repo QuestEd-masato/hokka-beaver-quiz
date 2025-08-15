@@ -370,19 +370,25 @@ const Database = {
           return new Date(a.completed_at) - new Date(b.completed_at);
         });
       
-      // ランク付けとアンケート情報を追加
+      // ランク付けとアンケート情報を追加（ユーザー情報と結合）
       return rankings.map((ranking, index) => {
+        // ユーザー情報を取得
+        const user = this.users.get(ranking.userId);
+        const nickname = user ? user.nickname : (ranking.nickname || 'Unknown');
+        const ageGroup = user ? user.age_group : 'unknown';
+        
         // アンケート回答状況をチェック
         const isSurveyCompleted = this.surveyAnswers.has(ranking.userId);
         const surveyBonus = isSurveyCompleted ? 10 : 0;
         
         return {
           rank: index + 1,
-          nickname: ranking.nickname,
+          nickname: nickname,
           userId: ranking.userId,
           score: ranking.score,
           correctCount: ranking.correctCount,
           completed_at: ranking.completed_at,
+          age_group: ageGroup,
           surveyBonus: surveyBonus,
           surveyCompleted: isSurveyCompleted
         };

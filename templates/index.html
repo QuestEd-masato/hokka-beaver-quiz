@@ -218,6 +218,79 @@
 
     <!-- JavaScript -->
     <script src="/js/app.js"></script>
+    
+    <!-- インデックスページ固有のスクリプト -->
+    <script>
+        // ページ読み込み時にランキングプレビューを取得
+        document.addEventListener('DOMContentLoaded', async () => {
+            await loadRankingPreview();
+        });
+        
+        // ランキングプレビュー読み込み
+        async function loadRankingPreview() {
+            try {
+                const rankings = await Ranking.getRanking();
+                
+                if (rankings && rankings.length > 0) {
+                    displayRankingPreview(rankings.slice(0, 3));
+                } else {
+                    // データがない場合はデフォルト表示を維持
+                    console.log('ランキングデータなし');
+                }
+            } catch (error) {
+                console.error('ランキングプレビュー読み込みエラー:', error);
+                // エラー時もデフォルト表示を維持
+            }
+        }
+        
+        // ランキングプレビュー表示
+        function displayRankingPreview(top3) {
+            const previewContainer = document.getElementById('ranking-preview');
+            if (!previewContainer || top3.length === 0) return;
+            
+            // 認証状態を確認（Auth が利用可能な場合）
+            const isAuthenticated = typeof Auth !== 'undefined' && Auth.isAuthenticated();
+            const currentUser = isAuthenticated ? Auth.getCurrentUser() : null;
+            const isAdmin = currentUser && currentUser.is_admin;
+            
+            const previewHtml = top3.map((user, index) => {
+                const position = index + 1;
+                let medal = ['🥇', '🥈', '🥉'][index];
+                
+                // 認証状態に応じて表示名を決定
+                let displayName;
+                if (isAdmin) {
+                    displayName = user.nickname;
+                } else if (isAuthenticated) {
+                    displayName = user.nickname;
+                } else {
+                    displayName = `🏆 TOP ${position}`;
+                }
+                
+                return `
+                    <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.75rem; margin-bottom: 0.5rem; background: var(--light-gray); border-radius: var(--border-radius);">
+                        <div style="display: flex; align-items: center; gap: 1rem;">
+                            <span style="font-size: 1.5rem;">${medal}</span>
+                            <div>
+                                <div style="font-weight: 600; color: var(--primary);">${displayName}</div>
+                                <div style="font-size: var(--font-size-sm); color: var(--gray);">${user.correctCount}/10問正解</div>
+                            </div>
+                        </div>
+                        <div style="text-align: right;">
+                            <div style="font-size: 1.2rem; font-weight: 700; color: var(--primary);">${user.score}点</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            previewContainer.innerHTML = `
+                ${previewHtml}
+                <div class="text-center" style="margin-top: 1rem;">
+                    <a href="/ranking" class="btn btn-outline">📊 ランキング全体を見る</a>
+                </div>
+            `;
+        }
+    </script>
 
     <style>
         .flow-steps {
