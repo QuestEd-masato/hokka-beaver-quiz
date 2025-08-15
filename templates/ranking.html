@@ -15,7 +15,9 @@
                     <img src="/images/beaver-logo.png" alt="ビーバーロゴ" style="height: 50px; margin-right: 15px;">
                     hokkaクイズラリー
                 </h1>
-                <button onclick="Auth.logout()" class="btn btn-secondary btn-small">ログアウト</button>
+                <div id="header-auth-section">
+                    <!-- 認証状態に応じて動的に表示される -->
+                </div>
             </div>
         </div>
     </header>
@@ -134,8 +136,47 @@
     <script>
         // ページ読み込み時の初期化
         document.addEventListener('DOMContentLoaded', async () => {
+            setupAuthHeader();
             await loadRankingData();
         });
+        
+        // 認証状態に応じたヘッダー設定
+        function setupAuthHeader() {
+            const headerSection = document.getElementById('header-auth-section');
+            
+            if (typeof Auth !== 'undefined' && Auth.isAuthenticated()) {
+                const currentUser = Auth.getCurrentUser();
+                if (currentUser) {
+                    if (currentUser.is_admin) {
+                        // 管理者の場合
+                        headerSection.innerHTML = `
+                            <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                <span style="color: var(--primary); font-size: var(--font-size-sm);">管理者: ${currentUser.nickname}</span>
+                                <a href="/admin" class="btn btn-outline btn-small">管理画面</a>
+                                <button onclick="Auth.logout()" class="btn btn-secondary btn-small">ログアウト</button>
+                            </div>
+                        `;
+                    } else {
+                        // 一般ユーザーの場合
+                        headerSection.innerHTML = `
+                            <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                <span style="color: var(--primary); font-size: var(--font-size-sm);">ログイン中: ${currentUser.nickname}</span>
+                                <a href="/mypage" class="btn btn-outline btn-small">マイページ</a>
+                                <button onclick="Auth.logout()" class="btn btn-secondary btn-small">ログアウト</button>
+                            </div>
+                        `;
+                    }
+                }
+            } else {
+                // 未ログインの場合
+                headerSection.innerHTML = `
+                    <div style="display: flex; gap: 0.5rem;">
+                        <a href="/" class="btn btn-outline btn-small">ログイン</a>
+                        <a href="/quiz" class="btn btn-primary btn-small">クイズに挑戦</a>
+                    </div>
+                `;
+            }
+        }
 
         // ランキングデータ読み込み
         async function loadRankingData() {
@@ -183,6 +224,11 @@
             const podiumContainer = Utils.$('#podium');
             if (!podiumContainer || top3.length === 0) return;
 
+            // 認証状態とロールに基づく表示制御
+            const isAuthenticated = typeof Auth !== 'undefined' && Auth.isAuthenticated();
+            const currentUser = isAuthenticated ? Auth.getCurrentUser() : null;
+            const isAdmin = currentUser && currentUser.is_admin;
+
             const podiumHtml = top3.map((user, index) => {
                 const position = index + 1;
                 let medal, bgColor, textColor;
@@ -216,7 +262,7 @@
                     ">
                         <div style="font-size: 3rem; margin-bottom: 0.5rem;">${medal}</div>
                         <div style="font-size: 1.5rem; font-weight: 700; margin-bottom: 0.5rem;">
-                            ${user.nickname}
+                            ${getDisplayName(user, position, isAuthenticated, isAdmin)}
                         </div>
                         <div style="font-size: 2rem; font-weight: 700; margin-bottom: 0.5rem;">
                             ${user.score}点
@@ -245,7 +291,27 @@
                 return;
             }
 
-            const rankingHtml = rankings.map((user, index) => {
+            // 認証状態とロールに基づく表示制御
+            const isAuthenticated = typeof Auth !== 'undefined' && Auth.isAuthenticated();
+            const currentUser = isAuthenticated ? Auth.getCurrentUser() : null;
+            const isAdmin = currentUser && currentUser.is_admin;
+            
+            // 未ログインの場合はTOP10のみ表示
+            const displayRankings = !isAuthenticated ? rankings.slice(0, 10) : rankings;
+            
+            // 未ログイン向けの注意メッセージ追加
+            if (!isAuthenticated && rankings.length > 10) {
+                rankingContainer.innerHTML = `
+                    <div class="text-center" style="padding: 1rem; margin-bottom: 1rem; background: rgba(210, 105, 30, 0.1); border-radius: var(--border-radius); border: 1px solid rgba(210, 105, 30, 0.3);">
+                        <p style="color: var(--primary); font-weight: 600; margin: 0;">TOP 10ランキングを表示中</p>
+                        <p style="color: var(--gray); font-size: var(--font-size-sm); margin: 0.5rem 0 0 0;">
+                            <a href="/" style="color: var(--primary);">ログイン</a>して全ランキングを見よう！
+                        </p>
+                    </div>
+                ` + rankingContainer.innerHTML;
+            }
+
+            const rankingHtml = displayRankings.map((user, index) => {
                 const position = index + 1;
                 let rankClass = '';
                 let rankIcon = position;
@@ -267,7 +333,7 @@
                     <div class="ranking-item fade-in" style="animation-delay: ${index * 0.05}s;">
                         <div class="rank-position ${rankClass}">${rankIcon}</div>
                         <div class="rank-info">
-                            <div class="rank-nickname">${user.nickname}</div>
+                            <div class="rank-nickname">${getDisplayName(user, position, isAuthenticated, isAdmin)}</div>
                             <div class="rank-score">
                                 ${user.score}点 (${user.correctCount}/10問正解) - ${ageGroupText}
                             </div>
@@ -287,6 +353,24 @@
             }).join('');
 
             rankingContainer.innerHTML = rankingHtml;
+        }
+
+        // 表示名取得（認証状態とロールに応じて匿名化）
+        function getDisplayName(user, position, isAuthenticated, isAdmin) {
+            if (isAdmin) {
+                // 管理者: 実名表示
+                return `${user.nickname}`;
+            } else if (isAuthenticated) {
+                // ログインユーザー: ニックネーム表示
+                return user.nickname;
+            } else {
+                // 未ログイン: 匿名化表示
+                if (position <= 3) {
+                    return `🏆 TOP ${position}`;
+                } else {
+                    return `参加者 ${String.fromCharCode(64 + position)}`;
+                }
+            }
         }
 
         // スコアバッジの色を取得
