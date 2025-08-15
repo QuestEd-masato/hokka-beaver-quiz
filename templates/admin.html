@@ -586,11 +586,8 @@
                             <small>${new Date(participant.created_at).toLocaleDateString('ja-JP')}</small>
                         </td>
                         <td>
-                            <button onclick="viewParticipantDetails(${participant.id})" class="btn btn-outline btn-small">
-                                👁️ 詳細
-                            </button>
-                            <button onclick="deleteParticipant(${participant.id}, '${participant.nickname}')" class="btn btn-danger btn-small" style="margin-left: 0.5rem;">
-                                🗑️ 削除
+                            <button onclick="deleteParticipant(${participant.id}, '${participant.nickname}')" class="btn btn-danger btn-small">
+                                🗑️
                             </button>
                         </td>
                     </tr>
@@ -1173,6 +1170,59 @@
             padding: 0.75rem;
             text-align: left;
             border-bottom: 1px solid var(--light-gray);
+        }
+        
+        /* 操作列の幅を制限 */
+        .participants-table th:last-child,
+        .participants-table td:last-child {
+            width: 60px;
+            min-width: 60px;
+            max-width: 60px;
+            text-align: center;
+            padding: 0.5rem;
+        }
+        
+        /* 操作列内のボタンサイズ最適化 */
+        .participants-table td:last-child .btn {
+            width: 36px;
+            height: 36px;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+        }
+        
+        /* スマホ対応の操作列最適化 */
+        @media (max-width: 768px) {
+            .participants-table th:last-child,
+            .participants-table td:last-child {
+                width: 50px;
+                min-width: 50px;
+                max-width: 50px;
+                padding: 0.25rem;
+            }
+            
+            .participants-table td:last-child .btn {
+                width: 32px;
+                height: 32px;
+                font-size: 0.9rem;
+            }
+        }
+        
+        @media (max-width: 400px) {
+            .participants-table th:last-child,
+            .participants-table td:last-child {
+                width: 40px;
+                min-width: 40px;
+                max-width: 40px;
+            }
+            
+            .participants-table td:last-child .btn {
+                width: 28px;
+                height: 28px;
+                font-size: 0.8rem;
+            }
         }
         
         .participants-table th {
