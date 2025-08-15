@@ -17,8 +17,8 @@
 - **開発言語**: JavaScript (Node.js)
 - **フロントエンド**: HTML/CSS/JavaScript（シングルページ構成）
 - **バックエンド**: Express.js
-- **データベース**: ハイブリッド方式（JSON主導 + RDS部分補助）
-- **インフラ**: AWS EC2 + RDS + Elastic IP
+- **データベース**: JSON統一方式（Memory Maps + database.json）
+- **インフラ**: AWS EC2 + Elastic IP（RDS削除済み）
 
 ## 🏗️ アーキテクチャ（Phase A最適化版）
 
@@ -113,9 +113,9 @@ questions (10問)     # JSON管理、RDS未移行
 ```
 
 ### RDS使用状況
-- ✅ **survey_answers**: RDS管理（MySQLHelper使用）
-- ✅ **rankings**: RDS管理（MySQLHelper使用）
-- ✅ **quiz_completions**: RDS管理（MySQLHelper使用）
+- ✅ **survey_answers**: JSON管理（Memory Maps + database.json）
+- ✅ **rankings**: JSON管理（Memory Maps + database.json）
+- ✅ **quiz_completions**: JSON管理（Memory Maps + database.json）
 - ❌ **users**: JSON管理（RDS未使用）
 - ❌ **questions**: JSON管理（RDS未使用）
 - ❌ **user_answers**: JSON管理（RDS未使用）
@@ -183,7 +183,7 @@ Local → GitHub → EC2 (自動同期)
 ```
 
 ### パフォーマンス状況
-- **同時接続対応**: 100人（現構成）
+- **同時接続対応**: 200人（現構成）
 - **応答時間**: 16ms（平均）
 - **データベース**: 10回クエリ平均 <20ms
 - **メモリ使用量**: 55.3MB
