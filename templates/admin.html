@@ -1195,6 +1195,32 @@
         
         /* スマホ対応の操作列最適化 */
         @media (max-width: 768px) {
+            /* 登録日時列を非表示 */
+            .participants-table th:nth-child(6), /* 登録日時列 */
+            .participants-table td:nth-child(6) {
+                display: none;
+            }
+            
+            /* クイズ進捗列の2文字表示 */
+            .participants-table th:nth-child(3) {
+                font-size: 0;
+            }
+            .participants-table th:nth-child(3)::after {
+                content: "進捗";
+                font-size: var(--font-size-sm);
+                font-weight: 600;
+            }
+            
+            /* アンケート列の2文字表示 */
+            .participants-table th:nth-child(5) {
+                font-size: 0;
+            }
+            .participants-table th:nth-child(5)::after {
+                content: "回答";
+                font-size: var(--font-size-sm);
+                font-weight: 600;
+            }
+            
             .participants-table th:last-child,
             .participants-table td:last-child {
                 width: 50px;
