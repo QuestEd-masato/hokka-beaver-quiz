@@ -1048,7 +1048,7 @@ const Database = {
   /**
    * アンケート保存 - Memory Map統一版
    */
-  async saveSurveyAnswer(userId, feedback) {
+  async saveSurveyAnswer(userId, feedback, answers = null) {
     try {
       // 既存チェック
       if (this.surveyAnswers.has(userId)) {
@@ -1058,10 +1058,11 @@ const Database = {
         };
       }
       
-      // Memory Mapに保存
+      // Memory Mapに保存（answersフィールドを追加、feedbackは互換性のため維持）
       this.surveyAnswers.set(userId, {
         userId: userId,
         feedback: feedback || '',
+        answers: answers || {},  // 新規: 実際のアンケート回答データ
         submittedAt: new Date()
       });
       this.scheduleSave();

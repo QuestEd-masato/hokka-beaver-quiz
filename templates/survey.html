@@ -481,7 +481,7 @@
             }
         }
 
-        // アンケート送信
+        // アンケート送信（Survey.submitSurveyと統合）
         async function submitSurvey() {
             if (!Auth.isAuthenticated()) {
                 Utils.showError('ログインが必要です');
@@ -508,6 +508,12 @@
                 }
             });
 
+            // 回答がない場合の確認
+            if (Object.keys(answers).length === 0) {
+                Utils.showError('少なくとも1つの質問に回答してください');
+                return;
+            }
+
             try {
                 const result = await Utils.apiCall('/api/survey/submit', {
                     method: 'POST',
@@ -518,7 +524,11 @@
                 });
 
                 if (result.success) {
-                    Utils.showSuccess(`アンケートを送信しました！ボーナス${result.bonus_points}ポイントを獲得！`);
+                    // ボーナスポイントの表示を改善
+                    const message = result.bonusPoints ? 
+                        `アンケートを送信しました！ボーナス${result.bonusPoints}ポイントを獲得！` :
+                        'アンケートを送信しました！';
+                    Utils.showSuccess(message);
                     
                     // 送信ボタンを無効化
                     const submitBtn = Utils.$('#submit-survey-btn');

@@ -293,7 +293,9 @@ const server = http.createServer(async (req, res) => {
     const data = await getBody();
     try {
       // Memory Mapでアンケート保存（重複チェック込み）
-      const result = await Database.saveSurveyAnswer(data.userId, data.feedback);
+      // data.answersを受け取り、互換性のためfeedbackフィールドも生成
+      const feedbackText = data.answers ? JSON.stringify(data.answers) : (data.feedback || '');
+      const result = await Database.saveSurveyAnswer(data.userId, feedbackText, data.answers);
       
       if (!result.success) {
         Utils.sendError(res, 400, result.message);
