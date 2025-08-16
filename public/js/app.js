@@ -296,6 +296,58 @@ const Quiz = {
     }
   },
   
+  // 既存の回答をサーバーから読み込み
+  async loadExistingAnswers() {
+    if (!AppState.currentUser?.id) {
+      console.log('ユーザー情報が不足しています');
+      AppState.answers = Utils.loadFromStorage('quizAnswers') || {};
+      return;
+    }
+    
+    try {
+      console.log('サーバーから既存回答を読み込み中...', AppState.currentUser.id);
+      const resultsResponse = await Utils.apiCall(`/api/quiz/results/${AppState.currentUser.id}`);
+      
+      // サーバーから取得したデータを AppState.answers に変換
+      const serverAnswers = {};
+      if (resultsResponse && resultsResponse.results && Array.isArray(resultsResponse.results)) {
+        resultsResponse.results.forEach(result => {
+          if (result.userAnswer && result.questionNumber) {
+            serverAnswers[result.questionNumber] = result.userAnswer;
+          }
+        });
+      }
+      
+      console.log(`✅ サーバーから${Object.keys(serverAnswers).length}問の回答を復元:`, serverAnswers);
+      
+      // LocalStorageとの比較・統合
+      const localAnswers = Utils.loadFromStorage('quizAnswers') || {};
+      const localCount = Object.keys(localAnswers).length;
+      const serverCount = Object.keys(serverAnswers).length;
+      
+      // サーバーデータを優先、LocalStorageをバックアップとして使用
+      if (serverCount >= localCount) {
+        AppState.answers = { ...localAnswers, ...serverAnswers }; // サーバーデータで上書き
+        console.log(`📊 サーバーデータ優先: Server(${serverCount}) >= Local(${localCount})`);
+      } else {
+        AppState.answers = { ...serverAnswers, ...localAnswers }; // LocalStorageで補完
+        console.log(`📊 LocalStorage優先: Server(${serverCount}) < Local(${localCount})`);
+      }
+      
+      // LocalStorageを最新状態に同期
+      Utils.saveToStorage('quizAnswers', AppState.answers);
+      
+      console.log(`🔄 最終的な回答データ(${Object.keys(AppState.answers).length}問):`, AppState.answers);
+      
+    } catch (error) {
+      console.log('サーバーデータ読み込みエラー:', error);
+      // フォールバック: LocalStorageから読み込み
+      AppState.answers = Utils.loadFromStorage('quizAnswers') || {};
+      console.log('LocalStorageから復旧:', AppState.answers);
+      throw error; // 上位でハンドルするためにエラーを再throw
+    }
+  },
+  
   // 問題表示（問題文なし、解答欄のみ）
   displayQuestion(questionNumber) {
     console.log(`🔍 displayQuestion called: questionNumber=${questionNumber}, totalQuestions=${this.questions.length}`);
@@ -542,14 +594,19 @@ const Quiz = {
         return;
       }
       
-      // 既存の解答を読み込み（完了前のみ）
-      AppState.answers = Utils.loadFromStorage('quizAnswers') || {};
+      // 既存の解答をサーバーから読み込み（完了前のみ）
+      await this.loadExistingAnswers();
       AppState.currentQuestion = Object.keys(AppState.answers).length + 1 || 1;
       if (AppState.currentQuestion > 10) AppState.currentQuestion = 10;
     } catch (error) {
       console.log('クイズ状態チェックエラー:', error);
-      // エラー時はローカルストレージから復旧を試みる
-      AppState.answers = Utils.loadFromStorage('quizAnswers') || {};
+      // エラー時はサーバーデータ取得を試行、失敗時はローカルストレージから復旧
+      try {
+        await this.loadExistingAnswers();
+      } catch (serverError) {
+        console.log('サーバーデータ取得失敗、LocalStorageから復旧:', serverError);
+        AppState.answers = Utils.loadFromStorage('quizAnswers') || {};
+      }
       AppState.currentQuestion = Object.keys(AppState.answers).length + 1 || 1;
       if (AppState.currentQuestion > 10) AppState.currentQuestion = 10;
     }
