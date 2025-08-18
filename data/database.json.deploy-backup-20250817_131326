@@ -314,7 +314,7 @@
       {
         "userId": 2,
         "nickname": "test",
-        "score": 20,
+        "score": 18.181818181818183,
         "correctCount": 2,
         "completed_at": "2025-08-17T00:31:46.873Z",
         "updatedAt": "2025-08-17T00:31:46.873Z"
@@ -358,11 +358,11 @@
       {
         "userId": 2,
         "completedAt": "2025-08-17T00:31:46.873Z",
-        "score": 20,
-        "baseScore": 20,
+        "score": 18.181818181818183,
+        "baseScore": 18.181818181818183,
         "bonusPoints": 0,
         "correctCount": 2,
-        "totalQuestions": 10
+        "totalQuestions": 11
       }
     ]
   ],

@@ -77,32 +77,58 @@ const Database = {
   },
 
   /**
-   * 非同期でデータをファイルに保存 (Phase A1 最適化)
+   * 非同期でデータをファイルに保存 (Phase A1 最適化 + 再試行機能)
    * 全てのMapオブジェクトをJSONファイルに永続化
+   * @param {number} retryCount - 現在の再試行回数（内部使用）
    */
-  async saveToFileAsync() {
-    const data = {
-      users: Array.from(this.users.entries()),
-      questions: Array.from(this.questions.entries()),
-      userAnswers: Array.from(this.userAnswers.entries()),
-      quizSessions: Array.from(this.quizSessions.entries()),
-      rankings: Array.from(this.rankings.entries()),
-      surveyAnswers: Array.from(this.surveyAnswers.entries()),
-      quizCompletions: Array.from(this.quizCompletions.entries()),
-      timestamp: new Date().toISOString()
-    };
+  async saveToFileAsync(retryCount = 0) {
+    const MAX_RETRIES = 3;
+    const RETRY_DELAY = 1000; // 1秒
     
-    // データディレクトリが存在しない場合は作成
-    if (!fs.existsSync(DATA_DIR)) {
-      fs.mkdirSync(DATA_DIR, { recursive: true });
+    try {
+      const data = {
+        users: Array.from(this.users.entries()),
+        questions: Array.from(this.questions.entries()),
+        userAnswers: Array.from(this.userAnswers.entries()),
+        quizSessions: Array.from(this.quizSessions.entries()),
+        rankings: Array.from(this.rankings.entries()),
+        surveyAnswers: Array.from(this.surveyAnswers.entries()),
+        quizCompletions: Array.from(this.quizCompletions.entries()),
+        timestamp: new Date().toISOString()
+      };
+      
+      // データディレクトリが存在しない場合は作成
+      if (!fs.existsSync(DATA_DIR)) {
+        fs.mkdirSync(DATA_DIR, { recursive: true });
+      }
+      
+      // 非同期でファイル書き込み
+      const fs_promises = require('fs').promises;
+      await fs_promises.writeFile(
+        path.join(DATA_DIR, 'database.json'), 
+        JSON.stringify(data, null, 2)
+      );
+      
+      // 成功時は再試行カウントをリセット（必要な場合のログ出力）
+      if (retryCount > 0) {
+        logger.info(`✅ 保存成功 (再試行 ${retryCount}回目で成功)`);
+      }
+      
+    } catch (error) {
+      // 再試行ロジック
+      if (retryCount < MAX_RETRIES) {
+        logger.error(`❌ 保存失敗 (試行 ${retryCount + 1}/${MAX_RETRIES}): ${error.message}`);
+        logger.info(`⏳ ${RETRY_DELAY}ms後に再試行します...`);
+        
+        // 遅延を入れて再試行
+        await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
+        return this.saveToFileAsync(retryCount + 1);
+      }
+      
+      // 最大再試行回数に達した場合はエラーを投げる
+      logger.error(`❌ 保存失敗: 最大再試行回数(${MAX_RETRIES})に達しました`);
+      throw error;
     }
-    
-    // 非同期でファイル書き込み
-    const fs_promises = require('fs').promises;
-    await fs_promises.writeFile(
-      path.join(DATA_DIR, 'database.json'), 
-      JSON.stringify(data, null, 2)
-    );
   },
 
   /**
@@ -225,9 +251,11 @@ const Database = {
       
       // Memory Mapに保存
       this.users.set(newId, user);
-      this.scheduleSave();
       
-      logger.info(`新規ユーザー作成: ${user.nickname}`);
+      // クリティカル操作のため即時保存
+      await this.saveImmediately();
+      
+      logger.info(`新規ユーザー作成: ${user.nickname} (即時保存完了)`);
       
       return { ...user, password_hash: undefined }; // パスワードハッシュは返さない
     } catch (error) {
@@ -328,7 +356,9 @@ const Database = {
     const nickname = user ? user.nickname : 'Unknown';
     await this.updateRanking(userId, finalScore, correctCount, nickname, surveyCompleted);
     
-    this.scheduleSave(); // Phase A1: バッチ保存に変更
+    // クリティカル操作のため即時保存
+    await this.saveImmediately();
+    logger.info(`クイズ完了保存: ユーザー${userId} (即時保存完了)`);
     
     return {
       score: finalScore,
@@ -666,12 +696,31 @@ const Database = {
       const existingIds = Array.from(this.questions.keys());
       const newId = existingIds.length > 0 ? Math.max(...existingIds) + 1 : 1;
       
-      // 問題番号を設定（未指定の場合）
-      if (!questionData.question_number) {
+      // 問題番号の重複チェックと設定
+      if (questionData.question_number) {
+        // 明示的に番号が指定された場合、重複チェック
+        const existingQuestion = Array.from(this.questions.values())
+          .find(q => q.question_number === questionData.question_number);
+        
+        if (existingQuestion) {
+          throw new Error(`問題番号 ${questionData.question_number} は既に使用されています`);
+        }
+      } else {
+        // 番号が未指定の場合、自動採番
         const existingNumbers = Array.from(this.questions.values())
           .map(q => q.question_number)
           .filter(n => n);
-        questionData.question_number = existingNumbers.length > 0 ? Math.max(...existingNumbers) + 1 : 1;
+        questionData.question_number = existingNumbers.length > 0 ? 
+          Math.max(...existingNumbers) + 1 : 1;
+      }
+      
+      // 必須フィールドの検証
+      if (!questionData.question_text || questionData.question_text.trim() === '') {
+        throw new Error('問題文は必須です');
+      }
+      
+      if (!questionData.correct_answer || !['A', 'B', 'C', 'D'].includes(questionData.correct_answer)) {
+        throw new Error('正解は A, B, C, D のいずれかを指定してください');
       }
       
       const question = {
@@ -763,9 +812,11 @@ const Database = {
       
       // ユーザー削除（Memory Map）
       this.users.delete(userId);
-      this.scheduleSave();
       
-      logger.info(`ユーザー削除完了: ${userData.nickname}`);
+      // クリティカル操作のため即時保存
+      await this.saveImmediately();
+      
+      logger.info(`ユーザー削除完了: ${userData.nickname} (即時保存完了)`);
       return { success: true, deletedUser: userData.nickname };
     } catch (error) {
       logger.error(`ユーザー削除エラー: ${error.message}`);
@@ -1050,6 +1101,26 @@ const Database = {
    */
   async saveSurveyAnswer(userId, feedback, answers = null) {
     try {
+      // サイズ制限の定義
+      const MAX_FEEDBACK_LENGTH = 1000; // 文字数制限
+      const MAX_ANSWERS_SIZE = 50; // 回答項目数制限
+      
+      // フィードバックのサイズチェック
+      if (feedback && feedback.length > MAX_FEEDBACK_LENGTH) {
+        return {
+          success: false,
+          message: `フィードバックは${MAX_FEEDBACK_LENGTH}文字以内で入力してください（現在: ${feedback.length}文字）`
+        };
+      }
+      
+      // アンケート回答項目数のチェック
+      if (answers && typeof answers === 'object' && Object.keys(answers).length > MAX_ANSWERS_SIZE) {
+        return {
+          success: false,
+          message: `アンケート項目が多すぎます（最大${MAX_ANSWERS_SIZE}項目、現在: ${Object.keys(answers).length}項目）`
+        };
+      }
+      
       // 既存チェック
       if (this.surveyAnswers.has(userId)) {
         return {
@@ -1153,6 +1224,31 @@ const Database = {
     participants.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
     
     return participants;
+  },
+
+  /**
+   * 即時保存（クリティカル操作用）
+   * バッチ保存をスキップして即座にファイル保存
+   * 重要な操作（ユーザー作成、クイズ完了、ユーザー削除）で使用
+   */
+  async saveImmediately() {
+    try {
+      // バッチタイマーをクリア
+      if (this._batchTimer) {
+        clearTimeout(this._batchTimer);
+        this._batchTimer = null;
+      }
+      
+      // 即座に保存
+      await this.saveToFileAsync();
+      this._isDirty = false;
+      logger.info('⚡ 即時保存完了');
+      
+      return true;
+    } catch (error) {
+      logger.error('❌ 即時保存エラー:' + error.message);
+      throw error;
+    }
   }
 };
 
