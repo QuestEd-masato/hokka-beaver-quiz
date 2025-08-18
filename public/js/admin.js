@@ -966,3 +966,32 @@ function executeAutoRedirect() {
 }
 
 // 自動リダイレクト初期化（統合済み - DOMContentLoadedで実行）
+
+// === グローバル関数公開（HTML onclick属性から呼び出し用） ===
+// 重複チェック付きの安全な公開
+if (typeof window !== 'undefined') {
+    // 削除機能（緊急修正 - Phase 1）
+    if (!window.deleteParticipant) {
+        window.deleteParticipant = deleteParticipant;
+    } else {
+        console.warn('deleteParticipant already exists in global scope');
+    }
+    
+    if (!window.deleteQuestion) {
+        window.deleteQuestion = deleteQuestion;
+    } else {
+        console.warn('deleteQuestion already exists in global scope');
+    }
+    
+    if (!window.deleteUser) {
+        window.deleteUser = deleteUser;
+    } else {
+        console.warn('deleteUser already exists in global scope');
+    }
+    
+    console.log('Admin functions exported to global scope:', {
+        deleteParticipant: !!window.deleteParticipant,
+        deleteQuestion: !!window.deleteQuestion,
+        deleteUser: !!window.deleteUser
+    });
+}
