@@ -87,7 +87,13 @@ const server = http.createServer(async (req, res) => {
   if (pathname === '/' || pathname === '/index.html') {
     const filePath = path.join(__dirname, 'templates', 'index.html');
     if (fs.existsSync(filePath)) {
-      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+      // キャッシュ制御ヘッダーを追加してブラウザキャッシュ問題を解決
+      res.writeHead(200, { 
+        'Content-Type': 'text/html; charset=utf-8',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+      });
       fs.createReadStream(filePath).pipe(res);
       return;
     }
@@ -97,7 +103,13 @@ const server = http.createServer(async (req, res) => {
   if (Utils.isHTMLPage(pathname)) {
     const filePath = path.join(__dirname, 'templates', pathname.replace('/', '') + '.html');
     if (fs.existsSync(filePath)) {
-      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+      // キャッシュ制御ヘッダーを追加してブラウザキャッシュ問題を解決
+      res.writeHead(200, { 
+        'Content-Type': 'text/html; charset=utf-8',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+      });
       fs.createReadStream(filePath).pipe(res);
       return;
     }
