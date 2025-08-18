@@ -1817,7 +1817,9 @@
 
                 // リダイレクト実行（3秒後）
                 setTimeout(() => {
-                    const redirectUrl = `http://35.76.100.207/?admin_login=1&redirect=${encodeURIComponent(window.location.href)}`;
+                    // hunt-quizzes.jpからの場合は、35.76.100.207/adminへ直接リダイレクト
+                    const targetUrl = 'http://35.76.100.207/admin';
+                    const redirectUrl = `http://35.76.100.207/?admin_login=1&redirect=${encodeURIComponent(targetUrl)}`;
                     window.location.href = redirectUrl;
                 }, 3000);
 

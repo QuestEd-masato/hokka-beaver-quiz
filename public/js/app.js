@@ -968,7 +968,15 @@ async function initHomePage() {
   
   // 既にログイン済みの場合はリダイレクト先またはマイページへ
   if (Auth.isAuthenticated()) {
-    const redirectUrl = urlParams.get('redirect') || '/mypage';
+    const currentUser = Auth.getCurrentUser();
+    const isAdminLogin = urlParams.get('admin_login') === '1';
+    let redirectUrl = urlParams.get('redirect') || '/mypage';
+    
+    // 管理者で admin_login=1 パラメータがある場合は /admin へ
+    if (currentUser?.is_admin && isAdminLogin && !redirectUrl.includes('hunt-quizzes.jp')) {
+      redirectUrl = '/admin';
+    }
+    
     Utils.showSuccess('既にログイン済みです。');
     setTimeout(() => {
       window.location.href = redirectUrl;
@@ -1001,7 +1009,16 @@ async function initHomePage() {
         Utils.showSuccess('ログインしました！');
         
         // リダイレクト先を決定
-        const redirectUrl = urlParams.get('redirect') || '/mypage';
+        // 管理者で admin_login=1 パラメータがある場合は /admin へ
+        const currentUser = Auth.getCurrentUser();
+        const isAdminLogin = urlParams.get('admin_login') === '1';
+        let redirectUrl = urlParams.get('redirect') || '/mypage';
+        
+        // 管理者ログインかつ admin_login パラメータがある場合
+        if (currentUser?.is_admin && isAdminLogin && !redirectUrl.includes('hunt-quizzes.jp')) {
+          redirectUrl = '/admin';
+        }
+        
         setTimeout(() => {
           window.location.href = redirectUrl;
         }, 1000);
