@@ -10,6 +10,7 @@ console.log('app.js が読み込まれました');
 // === グローバル状態管理 ===
 const AppState = {
   currentUser: null,
+  authChecked: false,  // 認証状態キャッシュフラグ（多重実行防止）
   currentQuestion: 1,
   answers: {},
   totalQuestions: 10,
@@ -197,23 +198,36 @@ const Auth = {
     }
   },
   
-  // 完全なデータクリア（認証混乱防止）
+  // 完全なデータクリア（認証混乱防止・キャッシュクリア対応）
   clearAuthData() {
     Utils.removeFromStorage('currentUser');
     Utils.removeFromStorage('auth_token');
     Utils.removeFromStorage('quizAnswers');
     Utils.removeFromStorage('quizResult');
     AppState.currentUser = null;
+    AppState.authChecked = false;  // 認証キャッシュもクリア
   },
   
-  // ログアウト（完全化）
+  // ログアウト（完全化・キャッシュクリア対応）
   logout() {
     this.clearAuthData();
+    AppState.authChecked = false;  // 認証キャッシュをクリア
     window.location.href = '/';
   },
   
-  // 認証状態確認（整合性チェック強化）
+  // 認証状態確認（多重実行防止・キャッシュ機能付き）
   isAuthenticated() {
+    // キャッシュされた認証状態がある場合は即座に返答（多重実行防止）
+    if (AppState.authChecked && AppState.currentUser) {
+      return true;
+    }
+    
+    // キャッシュされた認証状態が「認証なし」の場合も即座に返答
+    if (AppState.authChecked && !AppState.currentUser) {
+      return false;
+    }
+    
+    // 初回のみ認証復元処理を実行
     const savedUser = Utils.loadFromStorage('currentUser');
     const authToken = Utils.loadFromStorage('auth_token');
     
@@ -222,6 +236,7 @@ const Auth = {
       // データ整合性確認
       if (typeof savedUser.id === 'number' && savedUser.nickname.length > 0) {
         AppState.currentUser = savedUser;
+        AppState.authChecked = true;  // キャッシュフラグ設定
         console.log('認証復元成功:', savedUser.nickname, 'ID:', savedUser.id);
         return true;
       }
@@ -230,6 +245,7 @@ const Auth = {
     // 不整合データのクリア（詳細ログ付き）
     console.log('認証データ不整合 - savedUser:', savedUser, 'authToken:', authToken);
     this.clearAuthData();
+    AppState.authChecked = true;  // 認証失敗もキャッシュ
     return false;
   },
   
