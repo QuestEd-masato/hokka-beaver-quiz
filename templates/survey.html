@@ -58,10 +58,10 @@
                         </div>
                     </div>
 
-                    <!-- 提出ボタン -->
+                    <!-- アンケート送信ボタン -->
                     <div class="text-center mt-4">
-                        <button type="submit" class="btn btn-success btn-large">
-                            🎁 アンケートを提出してボーナスGET（+10点）
+                        <button type="button" onclick="submitSurvey()" class="btn btn-success btn-large" id="submit-survey-btn">
+                            🎁 アンケート送信（+10ボーナスポイント）
                         </button>
                     </div>
                 </div>
@@ -166,12 +166,6 @@
                 </div>
             </div>
 
-            <!-- アンケート送信 -->
-            <div class="text-center mt-4">
-                <button onclick="submitSurvey()" class="btn btn-success btn-large" id="submit-survey-btn">
-                    🎁 アンケート送信（+10ボーナスポイント）
-                </button>
-            </div>
 
             <!-- アクションボタン -->
             <div class="text-center mt-4">
@@ -333,33 +327,6 @@
             }
         }
 
-        // アンケート提出
-        document.getElementById('survey-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            const formData = new FormData(e.target);
-            const answers = {};
-            
-            for (let [key, value] of formData.entries()) {
-                answers[key] = value;
-            }
-
-            try {
-                // アンケート提出API（シンプル版）
-                const result = { success: true, bonusPoints: 10 };
-                
-                if (result.success) {
-                    Utils.showSuccess(`アンケートを提出しました！ボーナス ${result.bonusPoints} ポイントを獲得！`);
-                    Utils.saveToStorage('surveyCompleted', true);
-                    
-                    setTimeout(() => {
-                        window.location.href = '/ranking';
-                    }, 2000);
-                }
-            } catch (error) {
-                Utils.showError('アンケートの提出に失敗しました');
-            }
-        });
 
         // アンケート設定保存（管理者のみ）
         function saveSurveySettings() {
