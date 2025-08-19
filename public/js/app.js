@@ -138,6 +138,12 @@ const Utils = {
     alert(message);
   },
   
+  // アラート表示（admin.js互換性対応）
+  showAlert(message) {
+    // showInfo と同様の動作（admin.js での Utils.showAlert 呼び出し対応）
+    alert(message);
+  },
+  
   // ページ遷移（削除予定 - 直接window.location.hrefを使用）
   
   // 進捗バー更新
