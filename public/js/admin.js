@@ -308,7 +308,7 @@ async function deleteParticipant(participantId, nickname) {
         console.log('削除API呼び出し:', `/api/admin/users/${participantId}`); // デバッグ用
         const response = await Utils.apiCall(`/api/admin/users/${participantId}`, {
             method: 'DELETE',
-            body: { admin_id: currentUser.id }
+            body: JSON.stringify({ admin_id: currentUser.id })
         });
 
         console.log('削除APIレスポンス:', response); // デバッグ用
@@ -825,7 +825,7 @@ async function deleteUser(userId) {
         const currentUser = Auth.getCurrentUser();
         const response = await Utils.apiCall(`/api/admin/users/${userId}`, {
             method: 'DELETE',
-            body: { admin_id: currentUser.id }
+            body: JSON.stringify({ admin_id: currentUser.id })
         });
         
         if (response.success) {
