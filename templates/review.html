@@ -84,7 +84,7 @@
                             <button class="btn btn-outline filter-btn active" data-filter="all">全て表示</button>
                             <button class="btn btn-outline filter-btn" data-filter="correct">正解のみ</button>
                             <button class="btn btn-outline filter-btn" data-filter="incorrect">不正解のみ</button>
-                            <button class="btn btn-outline filter-btn" data-filter="unanswered">未回答のみ</button>
+                            <button class="btn btn-outline filter-btn" data-filter="unanswered">未解答のみ</button>
                         </div>
                     </div>
                 </div>
@@ -100,7 +100,7 @@
                         <div class="action-buttons">
                             <a href="/mypage" class="btn btn-secondary">🏠 マイページに戻る</a>
                             <a href="/ranking" class="btn btn-success">🏆 ランキングを見る</a>
-                            <a href="/survey" class="btn btn-warning">📝 アンケートに回答</a>
+                            <a href="/survey" class="btn btn-warning" id="survey-nav-btn">📝 アンケートに回答</a>
                         </div>
                     </div>
                 </div>
@@ -148,7 +148,8 @@
             try {
                 // 問題データ読み込み
                 const questionsResult = await Utils.apiCall('/api/quiz/questions');
-                questions = questionsResult.questions;
+                // サーバーは配列を直接返すので、app.js と同じ処理で統一
+                questions = Array.isArray(questionsResult) ? questionsResult : (questionsResult.questions || []);
 
                 // ユーザー解答をサーバーから読み込み
                 try {
@@ -180,6 +181,9 @@
 
                 // フィルターイベント設定
                 setupFilterEvents();
+
+                // アンケートボタンの条件制御
+                await setupSurveyButtonControl();
 
             } catch (error) {
                 console.error('解答確認データ読み込みエラー:', error);
@@ -226,7 +230,7 @@
                             <div class="question-info">
                                 <span class="question-number">問題 ${question.question_number}</span>
                                 <span class="answer-status ${status}">
-                                    ${!isAnswered ? '未回答' : (isCorrect ? '✅ 正解' : '❌ 不正解')}
+                                    ${!isAnswered ? '未解答' : (isCorrect ? '✅ 正解' : '❌ 不正解')}
                                 </span>
                             </div>
                             ${isAnswered ? `<div class="answer-score">${isCorrect ? '+10点' : '0点'}</div>` : ''}
@@ -298,6 +302,74 @@
                     card.style.display = 'none';
                 }
             });
+        }
+
+        // アンケートボタンの条件制御（mypage.htmlと同じ制御ロジック）
+        async function setupSurveyButtonControl() {
+            try {
+                // クイズ完了状態をサーバーから取得
+                const statusResult = await Utils.apiCall(`/api/quiz/status/${AppState.currentUser.id}`);
+                const isQuizCompleted = statusResult.isCompleted;
+                
+                // アンケート完了状態をサーバーから取得
+                const surveyResult = await Utils.apiCall(`/api/survey/status/${AppState.currentUser.id}`);
+                const isSurveyCompleted = surveyResult.completed;
+                
+                const surveyButton = Utils.$('#survey-nav-btn');
+                if (!surveyButton) return;
+
+                if (isSurveyCompleted) {
+                    // アンケート回答済みの場合
+                    surveyButton.style.pointerEvents = 'none';
+                    surveyButton.style.opacity = '0.5';
+                    surveyButton.style.cursor = 'not-allowed';
+                    surveyButton.innerHTML = '✅ アンケート回答済み';
+                    surveyButton.classList.remove('btn-warning');
+                    surveyButton.classList.add('btn-secondary');
+                    surveyButton.removeAttribute('href');
+                    surveyButton.onclick = (e) => {
+                        e.preventDefault();
+                        Utils.showInfo('アンケートは既に回答済みです。ありがとうございました！');
+                        return false;
+                    };
+                    
+                } else if (!isQuizCompleted) {
+                    // クイズ未完了の場合
+                    surveyButton.style.pointerEvents = 'none';
+                    surveyButton.style.opacity = '0.5';
+                    surveyButton.style.cursor = 'not-allowed';
+                    surveyButton.innerHTML = '🔒 クイズ完了後に回答可能';
+                    surveyButton.classList.remove('btn-warning');
+                    surveyButton.classList.add('btn-secondary');
+                    surveyButton.removeAttribute('href');
+                    surveyButton.onclick = (e) => {
+                        e.preventDefault();
+                        Utils.showInfo('クイズを全て完了してからアンケートに回答できます。');
+                        return false;
+                    };
+                    
+                } else {
+                    // クイズ完了・アンケート未回答の場合（通常表示）
+                    surveyButton.style.pointerEvents = 'auto';
+                    surveyButton.style.opacity = '1';
+                    surveyButton.style.cursor = 'pointer';
+                    surveyButton.innerHTML = '📝 アンケートに回答';
+                    surveyButton.classList.remove('btn-secondary');
+                    surveyButton.classList.add('btn-warning');
+                    surveyButton.setAttribute('href', '/survey');
+                    surveyButton.onclick = null;
+                }
+                
+            } catch (error) {
+                console.error('アンケートボタン制御エラー:', error);
+                // エラー時は安全側に倒して無効化
+                const surveyButton = Utils.$('#survey-nav-btn');
+                if (surveyButton) {
+                    surveyButton.style.pointerEvents = 'none';
+                    surveyButton.style.opacity = '0.5';
+                    surveyButton.innerHTML = '❌ 状態確認エラー';
+                }
+            }
         }
     </script>
 
