@@ -6,6 +6,40 @@
 let allUsers = [];
 let filteredUsers = [];
 
+// 認証状態キャッシュ（多重実行防止）
+let adminAuthChecked = false;
+let adminAuthResult = null;
+
+// === Utils.showAlert フォールバック実装（app.js 読み込みタイミング対策）===
+// admin.js が app.js より先に実行される場合の安全対策
+if (typeof Utils === 'undefined') {
+    window.Utils = {};
+}
+if (!Utils.showAlert) {
+    Utils.showAlert = function(message, type) {
+        // DOM要素による表示を優先、なければalert
+        if (type === 'error' && typeof Utils.showError === 'function') {
+            Utils.showError(message);
+        } else if (type === 'success' && typeof Utils.showSuccess === 'function') {
+            Utils.showSuccess(message);
+        } else {
+            // フォールバック: 標準alert（最終手段）
+            console.warn('Utils.showAlert fallback:', message, type);
+            alert(message);
+        }
+    };
+}
+
+// 認証状態のキャッシュチェック関数（Auth.isAuthenticated()の多重実行防止）
+function checkAdminAuthCached() {
+    if (!adminAuthChecked) {
+        adminAuthChecked = true;
+        adminAuthResult = Auth.isAuthenticated();
+        console.log('Admin auth check cached:', adminAuthResult);
+    }
+    return adminAuthResult;
+}
+
 // ユーティリティ関数（重複除去）
 function getIsMobile() {
     return window.innerWidth <= 768;
@@ -50,7 +84,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 // 管理者アクセス確認
 function checkAdminAccess() {
     const currentUser = Auth.getCurrentUser();
-    if (!Auth.isAuthenticated() || !currentUser?.is_admin) {
+    if (!checkAdminAuthCached() || !currentUser?.is_admin) {
         document.getElementById('admin-check').style.display = 'block';
         document.getElementById('admin-main').style.display = 'none';
         return;
@@ -886,7 +920,7 @@ function initAutoRedirect() {
     }
 
     // 認証状態確認
-    const isAuthenticated = Auth.isAuthenticated();
+    const isAuthenticated = checkAdminAuthCached();
     const currentUser = Auth.getCurrentUser();
     const isAdmin = currentUser && currentUser.is_admin;
 
