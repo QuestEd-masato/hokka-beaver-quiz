@@ -264,7 +264,7 @@
                             ${question.explanation ? `
                                 <div class="explanation-section">
                                     <div class="explanation-header">💡 解説</div>
-                                    <div class="explanation-content">${question.explanation}</div>
+                                    <div class="explanation-content" data-explanation-text="${encodeURIComponent(question.explanation)}"></div>
                                 </div>
                             ` : ''}
                         </div>
@@ -564,6 +564,41 @@
             line-height: 1.6;
         }
 
+        /* 解説内URLリンクスタイル */
+        .explanation-link {
+            color: var(--primary);
+            text-decoration: underline;
+            word-break: break-all;
+            display: inline-block;
+            margin: 0.1rem 0.2rem;
+            padding: 0.1rem 0.3rem;
+            border-radius: 3px;
+            background: rgba(210, 105, 30, 0.1);
+            transition: all 0.2s ease;
+            font-size: 0.95em;
+        }
+
+        .explanation-link:hover {
+            color: var(--secondary);
+            background: rgba(210, 105, 30, 0.2);
+            text-decoration: none;
+        }
+
+        .explanation-link:visited {
+            color: var(--gray);
+        }
+
+        /* 解説リンクのモバイル対応 */
+        @media (max-width: 768px) {
+            .explanation-link {
+                font-size: 0.9rem;
+                word-break: break-all;
+                line-height: 1.4;
+                display: inline-block;
+                margin: 0.2rem 0;
+            }
+        }
+
         @media (max-width: 768px) {
             .answer-header {
                 flex-direction: column;
@@ -578,5 +613,126 @@
             }
         }
     </style>
+
+    <!-- 解説URLリンク化処理（セキュリティ優先実装） -->
+    <script>
+        // セキュリティ設定: ホワイトリスト方式
+        const ALLOWED_DOMAINS = [
+            'hokka.jp',
+            'www.kanazawa-cci.or.jp',
+            'kanazawa-cci.or.jp',
+            'shokuhin.net'
+        ];
+
+        // HTMLエスケープ関数（XSS防止）
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // 安全なリンク生成関数
+        function createSafeLink(url) {
+            try {
+                // javascript:スキーム等の危険なパターンを事前チェック
+                if (url.toLowerCase().includes('javascript:') || 
+                    url.toLowerCase().includes('data:') ||
+                    url.toLowerCase().includes('vbscript:')) {
+                    return escapeHtml(url);
+                }
+                
+                const urlObj = new URL(url);
+                
+                // プロトコル検証
+                if (!['https:', 'http:'].includes(urlObj.protocol)) {
+                    return escapeHtml(url);
+                }
+                
+                // ドメイン検証（ホワイトリスト）
+                if (!ALLOWED_DOMAINS.includes(urlObj.hostname)) {
+                    return escapeHtml(url);
+                }
+                
+                // 安全なリンク要素作成
+                const link = document.createElement('a');
+                link.href = url;
+                link.target = '_blank';
+                link.rel = 'noopener noreferrer';
+                link.className = 'explanation-link';
+                link.textContent = `🔗 ${url}`;
+                
+                return link.outerHTML;
+                
+            } catch (error) {
+                // URL解析エラー時は安全にエスケープ
+                return escapeHtml(url);
+            }
+        }
+
+        // 解説テキスト安全処理関数
+        function processExplanationSafely(container, explanationText) {
+            // コンテナクリア
+            container.innerHTML = '';
+            
+            // URL正規表現
+            const urlRegex = /(https?:\/\/[^\s<>"]+)/g;
+            const parts = explanationText.split(urlRegex);
+            
+            parts.forEach(part => {
+                if (part.match(urlRegex)) {
+                    // URL部分: 安全なリンク化
+                    const tempDiv = document.createElement('div');
+                    tempDiv.innerHTML = createSafeLink(part);
+                    const linkElement = tempDiv.firstChild;
+                    if (linkElement) {
+                        container.appendChild(linkElement);
+                    } else {
+                        // リンク作成失敗時はテキストノード
+                        container.appendChild(document.createTextNode(part));
+                    }
+                } else {
+                    // テキスト部分: 安全なテキストノード
+                    const lines = part.split('\n');
+                    lines.forEach((line, index) => {
+                        if (index > 0) {
+                            container.appendChild(document.createElement('br'));
+                        }
+                        container.appendChild(document.createTextNode(line));
+                    });
+                }
+            });
+        }
+
+        // DOM読み込み完了時の処理
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('解説URLリンク化処理開始');
+            
+            // 全ての解説コンテナを処理
+            const explanationContainers = document.querySelectorAll('.explanation-content[data-explanation-text]');
+            
+            explanationContainers.forEach(container => {
+                try {
+                    const encodedText = container.getAttribute('data-explanation-text');
+                    if (encodedText) {
+                        const explanationText = decodeURIComponent(encodedText);
+                        processExplanationSafely(container, explanationText);
+                    }
+                } catch (error) {
+                    console.error('解説処理エラー:', error);
+                    // エラー時はデータ属性から安全にテキスト表示
+                    const encodedText = container.getAttribute('data-explanation-text');
+                    if (encodedText) {
+                        try {
+                            container.textContent = decodeURIComponent(encodedText);
+                        } catch {
+                            container.textContent = '解説の表示でエラーが発生しました。';
+                        }
+                    }
+                }
+            });
+            
+            console.log(`解説URLリンク化完了: ${explanationContainers.length}件処理`);
+        });
+    </script>
 </body>
 </html>
