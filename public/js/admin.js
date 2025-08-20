@@ -742,29 +742,8 @@ async function loadUserList() {
 
 // ユーザー統計更新
 function updateUserStats() {
-    const totalUsers = allUsers.length;
-    const adminUsers = allUsers.filter(u => u.is_admin).length;
-    const completedUsers = allUsers.filter(u => checkUserQuizStatus(u.id) === 'completed').length;
-    const activeUsers = totalUsers - adminUsers;
-
-    const statsHtml = `
-        <div class="stat-card">
-            <div class="stat-number">${totalUsers}</div>
-            <div class="stat-label">総ユーザー数</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-number">${activeUsers}</div>
-            <div class="stat-label">一般ユーザー</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-number">${completedUsers}</div>
-            <div class="stat-label">クイズ完了</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-number">${adminUsers}</div>
-            <div class="stat-label">管理者</div>
-        </div>
-    `;
+    // 統計カード表示を無効化（UI簡潔化のため）
+    const statsHtml = '';
     
     Utils.$('#user-stats').innerHTML = statsHtml;
 }
