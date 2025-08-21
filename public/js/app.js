@@ -1,5 +1,5 @@
 /**
- * hokkaクイズラリー - メインアプリケーション
+ * ビーバー・フィーバー🎉 - メインアプリケーション
  * 作成日: 2025-07-14
  * 
  * シンプルな仕組みでモダンUIを実現
@@ -957,7 +957,7 @@ async function initHomePage() {
     // ページに一時的にメッセージを表示
     document.body.innerHTML = `
       <div style="text-align: center; padding: 50px; font-family: Arial;">
-        <h1>🦫 hokkaクイズラリー</h1>
+        <h1>🦫 ビーバー・フィーバー🎉</h1>
         <h2>自動ログイン中...</h2>
         <p>ユーザー名: ${nickname}</p>
         <div style="margin: 20px;">

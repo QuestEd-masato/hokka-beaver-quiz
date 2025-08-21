@@ -1,7 +1,7 @@
 {
   "name": "hokka-quiz-rally",
   "version": "2.0.0",
-  "description": "hokkaクイズラリー - 金沢学院大学附属中学校２年１組用ビーバーおかきクイズアプリケーション",
+  "description": "ビーバー・フィーバー🎉 - 金沢学院大学附属中学校２年１組用ビーバーおかきクイズアプリケーション",
   "main": "enhanced_server.js",
   "scripts": {
     "start": "node enhanced_server.js",
