@@ -229,15 +229,15 @@
             /* 参加者列の幅をさらに制限 */
             .participants-table th:first-child,
             .participants-table td:first-child {
-                width: 100px;
-                max-width: 100px;
+                width: 95px;
+                max-width: 95px;
             }
             
             /* その他の列の幅調整 - モバイル最適化 */
-            .participants-table th:nth-child(2) { width: 45px; }  /* 年齢層 */
-            .participants-table th:nth-child(3) { width: 50px; }  /* クイズ進捗 */
-            .participants-table th:nth-child(4) { width: 45px; }  /* スコア */
-            .participants-table th:nth-child(5) { width: 45px; }  /* アンケート */
+            .participants-table th:nth-child(2) { width: 40px; }  /* 年齢層 */
+            .participants-table th:nth-child(3) { width: 45px; }  /* クイズ進捗 */
+            .participants-table th:nth-child(4) { width: 40px; }  /* スコア */
+            .participants-table th:nth-child(5) { width: 40px; }  /* アンケート */
             
             /* 登録日時列を非表示 */
             .participants-table th:nth-child(6), /* 登録日時列 */
@@ -277,9 +277,9 @@
             
             .participants-table th:last-child,
             .participants-table td:last-child {
-                width: 45px;
-                min-width: 45px;
-                max-width: 45px;
+                width: 40px;
+                min-width: 40px;
+                max-width: 40px;
                 padding: 0.25rem;
             }
             
