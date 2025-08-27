@@ -427,6 +427,14 @@ function setupFormHandlers() {
 async function createNewUser() {
     const roleSelection = Utils.$('#new-user-role').value;
     
+    // デバッグ: 役割選択状況確認
+    console.log('🔍 Role Selection Debug:', {
+        roleSelection: roleSelection,
+        isAdmin: roleSelection === 'admin',
+        element: Utils.$('#new-user-role'),
+        elementValue: Utils.$('#new-user-role')?.value
+    });
+    
     const userData = {
         real_name: Utils.$('#new-user-name').value,
         nickname: Utils.$('#new-user-nickname').value,
@@ -435,6 +443,9 @@ async function createNewUser() {
         password: Utils.$('#new-user-password').value,
         is_admin: roleSelection === 'admin' // 役割選択を is_admin フラグに変換
     };
+
+    // デバッグ: 送信データ確認
+    console.log('📤 Sending User Data:', userData);
 
     try {
         const result = await Utils.apiCall('/api/admin/users', {
