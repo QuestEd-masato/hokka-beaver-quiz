@@ -6,6 +6,10 @@
 let allUsers = [];
 let filteredUsers = [];
 
+// 参加者検索専用データ（管理者検索と完全分離）
+let participantsData = [];
+let filteredParticipants = [];
+
 // 認証状態キャッシュ（多重実行防止）
 let adminAuthChecked = false;
 let adminAuthResult = null;
@@ -66,16 +70,8 @@ function getAgeGroupLabels() {
 document.addEventListener('DOMContentLoaded', async () => {
     checkAdminAccess();
     
-    // 検索・フィルタイベント設定
-    const searchInput = Utils.$('#user-search');
-    if (searchInput) {
-        searchInput.addEventListener('input', applyUserFilters);
-    }
-    
-    const ageFilter = Utils.$('#age-filter');
-    if (ageFilter) {
-        ageFilter.addEventListener('change', applyUserFilters);
-    }
+    // 参加者検索機能を初期化（管理者検索と分離）
+    initParticipantSearch();
     
     // 自動リダイレクト機能初期化
     initAutoRedirect();
@@ -209,6 +205,10 @@ async function loadParticipants() {
         const result = await Utils.apiCall(`/api/admin/participants?admin_id=${Auth.getCurrentUser().id}`);
         const participants = result.participants || [];
         
+        // 参加者検索用データを設定（管理者データと完全分離）
+        participantsData = participants;
+        filteredParticipants = participants; // 初期は全データ表示
+        
         // 統計更新
         updateParticipantsStats(participants);
         
@@ -304,6 +304,76 @@ function displayParticipantsTable(participants) {
 // 参加者更新
 async function refreshParticipants() {
     await loadParticipants();
+}
+
+// 参加者専用フィルタリング（管理者フィルタと完全分離）
+function applyParticipantFilters() {
+    const searchTerm = (Utils.$('#user-search').value || '').toLowerCase();
+    const ageFilter = Utils.$('#age-filter').value;
+    const statusFilter = Utils.$('#quiz-status-filter').value;
+    
+    // 高速フィルタリング（600人対応・O(n)最適化）
+    filteredParticipants = participantsData.filter(participant => {
+        // 名前検索（nickname + real_name）
+        const matchesSearch = !searchTerm || 
+            participant.nickname.toLowerCase().includes(searchTerm) ||
+            participant.real_name.toLowerCase().includes(searchTerm);
+            
+        // 年齢フィルタ
+        const matchesAge = !ageFilter || participant.age_group === ageFilter;
+        
+        // クイズ状況フィルタ
+        const participantStatus = getParticipantQuizStatus(participant);
+        const matchesStatus = !statusFilter || participantStatus === statusFilter;
+        
+        return matchesSearch && matchesAge && matchesStatus;
+    });
+    
+    // フィルタ結果を表示
+    displayFilteredParticipantsTable(filteredParticipants);
+}
+
+// 参加者クイズ状況判定（既存ロジック統一）
+function getParticipantQuizStatus(participant) {
+    if (participant.quiz.completed) return 'completed';
+    if (participant.quiz.answeredCount > 0) return 'progress';
+    return 'not-started';
+}
+
+// フィルタされた参加者テーブル表示（既存displayParticipantsTableを基盤）
+function displayFilteredParticipantsTable(participants) {
+    // 既存のdisplayParticipantsTable関数を再利用
+    displayParticipantsTable(participants);
+}
+
+// 参加者検索機能の初期化（管理者検索と完全分離）
+function initParticipantSearch() {
+    // DOM要素の取得
+    const searchInput = Utils.$('#user-search');
+    const ageFilter = Utils.$('#age-filter');
+    const statusFilter = Utils.$('#quiz-status-filter');
+    
+    // 参加者検索イベント設定（既存の管理者用イベントと分離）
+    if (searchInput) {
+        // デバウンシング付き検索（600人対応）
+        let searchTimeout;
+        searchInput.addEventListener('input', () => {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                applyParticipantFilters();
+            }, 300); // 300ms遅延で高速入力に対応
+        });
+    }
+    
+    if (ageFilter) {
+        ageFilter.addEventListener('change', applyParticipantFilters);
+    }
+    
+    if (statusFilter) {
+        statusFilter.addEventListener('change', applyParticipantFilters);
+    }
+    
+    console.log('参加者検索機能を初期化しました（管理者検索と完全分離）');
 }
 
 // 参加者詳細表示
