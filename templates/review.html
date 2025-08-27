@@ -177,66 +177,41 @@
             }
         }
 
-        // 解説テキスト安全処理関数（根本修正版 - 段階的処理確認）
+        // 解説テキスト安全処理関数（安定版 - Phase 1）
         function processExplanationSafely(explanationText) {
-            console.log('🔍 processExplanationSafely called with:', explanationText ? explanationText.length + ' characters' : 'null/undefined');
+            // デバッグログを最小限に削減（本番環境の安定性優先）
             
             if (!explanationText) {
-                console.log('⚠️ No explanation text provided');
                 return '';
             }
             
             try {
-                console.log('📝 Original text preview:', explanationText.substring(0, 50) + '...');
-                
                 // URL正規表現
                 const urlRegex = /(https?:\/\/[^\s<>"]+)/g;
                 const parts = explanationText.split(urlRegex);
-                console.log('🔄 Split into', parts.length, 'parts');
                 
                 let result = '';
-                let urlCount = 0;
-                let textCount = 0;
                 
-                parts.forEach((part, index) => {
-                    console.log(`  Part ${index}:`, part.match(urlRegex) ? 'URL' : 'TEXT', `(${part.length} chars)`);
-                    
+                parts.forEach(part => {
                     if (part.match(urlRegex)) {
                         // URL部分: 安全なリンク化
-                        urlCount++;
                         try {
-                            const linkHtml = createSafeLink(part);
-                            result += linkHtml;
-                            console.log('    ✅ URL processed:', linkHtml.length, 'chars');
-                        } catch (linkError) {
-                            console.error('    ❌ URL processing failed:', linkError);
-                            // URLエラーでもテキストとして保持
+                            result += createSafeLink(part);
+                        } catch (e) {
+                            // エラー時はテキストとして保持
                             result += escapeHtml(part);
                         }
                     } else {
                         // テキスト部分: 安全なテキストとして処理
-                        textCount++;
-                        const textHtml = escapeHtml(part).replace(/\n/g, '<br>');
-                        result += textHtml;
-                        console.log('    ✅ Text processed:', textHtml.length, 'chars');
+                        result += escapeHtml(part).replace(/\n/g, '<br>');
                     }
                 });
                 
-                console.log('📊 Processing summary:', {
-                    urlParts: urlCount,
-                    textParts: textCount,
-                    resultLength: result.length
-                });
-                console.log('✅ Final result preview:', result.substring(0, 100) + '...');
                 return result;
                 
             } catch (error) {
-                console.error('❌ Error processing explanation:', error);
-                console.log('🔄 Fallback: Using simple text conversion');
                 // フォールバック: 安全なテキスト表示
-                const fallback = escapeHtml(explanationText).replace(/\n/g, '<br>');
-                console.log('✅ Fallback result length:', fallback.length);
-                return fallback;
+                return escapeHtml(explanationText).replace(/\n/g, '<br>');
             }
         }
 
@@ -340,21 +315,8 @@
                 const isCorrect = isAnswered ? userAnswer === question.correct_answer : false;
                 const status = !isAnswered ? 'unanswered' : (isCorrect ? 'correct' : 'incorrect');
 
-                // 解説テキストを直接処理（根本修正版 - 詳細トレース）
-                console.log(`📝 Processing question ${question.question_number}:`, {
-                    hasExplanation: !!question.explanation,
-                    explanationLength: question.explanation ? question.explanation.length : 0,
-                    explanationPreview: question.explanation ? question.explanation.substring(0, 30) + '...' : 'none'
-                });
-                
+                // 解説テキストを直接処理（安定版）
                 const explanationHtml = question.explanation ? processExplanationSafely(question.explanation) : '';
-                
-                console.log(`📄 Result for question ${question.question_number}:`, {
-                    hasResult: !!explanationHtml,
-                    resultLength: explanationHtml ? explanationHtml.length : 0,
-                    resultType: typeof explanationHtml,
-                    willDisplay: explanationHtml ? true : false
-                });
 
                 return `
                     <div class="answer-detail-card slide-in answer-${status}" style="animation-delay: ${index * 0.1}s;" data-status="${status}">
