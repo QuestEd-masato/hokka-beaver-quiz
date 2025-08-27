@@ -425,12 +425,15 @@ function setupFormHandlers() {
 
 // 新規ユーザー作成
 async function createNewUser() {
+    const roleSelection = Utils.$('#new-user-role').value;
+    
     const userData = {
         real_name: Utils.$('#new-user-name').value,
         nickname: Utils.$('#new-user-nickname').value,
         age_group: Utils.$('#new-user-age').value,
         gender: Utils.$('#new-user-gender').value,
-        password: Utils.$('#new-user-password').value
+        password: Utils.$('#new-user-password').value,
+        is_admin: roleSelection === 'admin' // 役割選択を is_admin フラグに変換
     };
 
     try {
@@ -440,7 +443,8 @@ async function createNewUser() {
         });
 
         if (result.success) {
-            Utils.showSuccess(`アカウントを作成しました: ${userData.nickname}`);
+            const roleText = userData.is_admin ? '管理者' : '参加者';
+            Utils.showSuccess(`${roleText}アカウントを作成しました: ${userData.nickname}`);
             Utils.$('#create-user-form').reset();
             await loadDashboardStats(); // 統計を更新
         }

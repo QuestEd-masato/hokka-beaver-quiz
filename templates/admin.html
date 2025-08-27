@@ -156,8 +156,15 @@
                                         <option value="other">その他</option>
                                     </select>
                                 </div>
-                                <input type="password" id="new-user-password" class="form-input" 
-                                       placeholder="パスワード" required>
+                                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem;">
+                                    <input type="password" id="new-user-password" class="form-input" 
+                                           placeholder="パスワード" required>
+                                    <select id="new-user-role" class="form-input" required>
+                                        <option value="">役割を選択</option>
+                                        <option value="user">参加者</option>
+                                        <option value="admin">管理者</option>
+                                    </select>
+                                </div>
                                 <button type="submit" class="btn btn-success btn-large">
                                     👤 アカウントを作成
                                 </button>
