@@ -38,11 +38,11 @@ const logger = {
   debug: (msg) => { if (LOG_LEVEL === 'debug') console.log('DEBUG:', msg); }
 };
 
-// 200名同時接続対応設定
-const MAX_CONNECTIONS = 200;
-const TIMEOUT = 30000; // 30秒タイムアウト
-const KEEP_ALIVE_TIMEOUT = 65000; // 65秒
-const HEADERS_TIMEOUT = 66000; // 66秒
+// 400名同時接続対応設定（文化祭最適化）
+const MAX_CONNECTIONS = 500; // 余裕を持った設定
+const TIMEOUT = 45000; // 45秒タイムアウト（余裕を持つ）
+const KEEP_ALIVE_TIMEOUT = 75000; // 75秒
+const HEADERS_TIMEOUT = 76000; // 76秒
 
 console.log('🦫 ビーバー・フィーバー🎉 強化版サーバーを起動中...');
 console.log('='.repeat(50));
@@ -604,26 +604,36 @@ const server = http.createServer(async (req, res) => {
   res.end('ページが見つかりません');
 });
 
-// サーバー接続管理
+// サーバー接続管理（文化祭最適化版）
 server.on('connection', (socket) => {
   currentConnections++;
-  logger.debug(`📊 現在の接続数: ${currentConnections}/${MAX_CONNECTIONS}`); // Phase A2: デバッグレベル
+  logger.debug(`📊 現在の接続数: ${currentConnections}/${MAX_CONNECTIONS}`);
   
   if (currentConnections > MAX_CONNECTIONS) {
-    console.log('⚠️  最大接続数を超過しました。接続を閉じます。');
+    console.log(`⚠️  最大接続数を超過しました (${currentConnections}/${MAX_CONNECTIONS})。接続を閉じます。`);
     socket.destroy();
+    currentConnections--; // 即座にカウンタをデクリメント
     return;
   }
   
+  // 接続の最適化設定
   socket.setTimeout(TIMEOUT);
+  socket.setKeepAlive(true, 30000); // Keep-Alive有効化
+  socket.setNoDelay(true); // Nagleアルゴリズム無効化（レスポンス高速化）
+  
   socket.on('close', () => {
     currentConnections--;
-    console.log(`📊 接続終了: ${currentConnections}/${MAX_CONNECTIONS}`);
+    logger.debug(`📊 接続終了: ${currentConnections}/${MAX_CONNECTIONS}`);
   });
   
   socket.on('error', (error) => {
-    console.error('🔴 ソケットエラー:', error.message);
-    currentConnections--;
+    logger.error(`🔴 ソケットエラー: ${error.message}`);
+    currentConnections = Math.max(0, currentConnections - 1); // 安全なデクリメント
+  });
+  
+  socket.on('timeout', () => {
+    logger.debug('⏱️  接続タイムアウト');
+    socket.destroy();
   });
 });
 
